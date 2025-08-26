@@ -17,5 +17,6 @@ PYBIND11_MODULE(sm_gco, handle) {
     py::class_<smgco::GCOSM, std::shared_ptr<smgco::GCOSM>> myclass(handle, "GCOSM");
     myclass.def(py::init<const Eigen::MatrixXd, const Eigen::MatrixXi, const Eigen::MatrixXd, const Eigen::MatrixXi, const Eigen::MatrixXd>());
     myclass.def("point_wise", &smgco::GCOSM::pointWise);
+    myclass.def("triangle_wise", &smgco::GCOSM::triangleWise);
     myclass.def("set_data_weight", &smgco::GCOSM::setDataWeight);
 }

@@ -29,6 +29,7 @@ class GCOSM {
     void printName();
 
     Eigen::MatrixXi pointWise(const bool smoothGeodesic=false);
+    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
 
     void setDataWeight(const float newDataWeight);
 };
