@@ -14,6 +14,7 @@ if( BUILD_PYTHON_BINDINGS )
 endif()
 # Libigl
 include(libigl)
+include(robin-map)
 
 
 # switch between python bindings and executable
@@ -43,15 +44,16 @@ add_subdirectory(gco)
 
 # Add your project files
 add_subdirectory(src)
+add_subdirectory(helper)
 
 
 if( NOT BUILD_MEX_FILE )
     if(OpenMP_CXX_FOUND)
         message("Compiling with OPENMP")
-        target_link_libraries(${PROJECT_NAME} PUBLIC igl::core OpenMP::OpenMP_CXX)
+        target_link_libraries(${PROJECT_NAME} PUBLIC igl::core tsl::robin_map OpenMP::OpenMP_CXX)
     else()
         message("Compiling without OPENMP")
-        target_link_libraries(${PROJECT_NAME} PUBLIC igl::core)
+        target_link_libraries(${PROJECT_NAME} PUBLIC igl::core tsl::robin_map)
     endif()
 endif()
 
