@@ -1,2 +1,6 @@
 build/*
 xcode/*
+*.egg*/
+dist/*
+.DS_Store
+*/.DS_Store
