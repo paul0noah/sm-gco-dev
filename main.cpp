@@ -16,4 +16,5 @@ int main(int argc, char *argv[]) {
     smgco::GCOSM smGCO(VX, FX, VY, FY, featDiff);
 
     std::cout << smGCO.pointWise(true) << std::endl;
+    std::cout << std::get<1>(smGCO.triangleWise()) << std::endl;
 }
