@@ -1,16 +1,19 @@
-#include <igl/decimate.h>
-#include <igl/read_triangle_mesh.h>
-#include <igl/find.h>
-#include <igl/colon.h>
-#include <igl/triangle_triangle_adjacency.h>
-#include <Eigen/Dense>
-#include "cppsrc/my_cpp_code.hpp"
+
+#include "helper/utils.hpp"
+#include "src/gco_shape_matching.hpp"
 
 int main(int argc, char *argv[]) {
 
-    mycppcode::MyClass clas("hello");
-    clas.printName();
+    auto X = utils::getTestShapeX();
+    Eigen::MatrixXd VX = std::get<0>(X);
+    Eigen::MatrixXi FX = std::get<1>(X);
+    const auto Y = utils::getTestShapeY();
+    Eigen::MatrixXd VY = std::get<0>(Y);
+    Eigen::MatrixXi FY = std::get<1>(Y);
+    const Eigen::MatrixXd featDiff = utils::getFeatureDiffXY();
 
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXf> out = mycppcode::myfunc0();
 
+    smgco::GCOSM smGCO(VX, FX, VY, FY, featDiff);
+
+    std::cout << smGCO.pointWise(true) << std::endl;
 }
