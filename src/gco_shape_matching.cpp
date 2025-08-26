@@ -1,0 +1,29 @@
+#include "gco_shape_matching.hpp"
+#include <gco/GCoptimization.h>
+
+namespace smgco {
+
+
+
+GCOSM::GCOSM(const Eigen::MatrixXd VX,
+             const Eigen::MatrixXi FX,
+             const Eigen::MatrixXd VY,
+             const Eigen::MatrixXi FY,
+             const Eigen::MatrixXd perVertexFeatureDifference) :
+VX(VX), FX(FX), VY(VY), FY(FY), perVertexFeatureDifference(perVertexFeatureDifference)
+{
+    prefix = "[GCOSM] ";
+    numIters = -1;
+    dataWeight = 1.0;
+
+}
+
+void GCOSM::printName() {
+    std::cout << prefix << std::endl;
+}
+
+void GCOSM::setDataWeight(const float newDataWeight) {
+    dataWeight = newDataWeight;
+}
+
+} // namespace smgco

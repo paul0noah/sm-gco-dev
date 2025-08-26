@@ -1,3 +1,4 @@
 target_sources(${PROJECT_NAME} PRIVATE
-					my_cpp_code.hpp
-					my_cpp_code.cpp)
+					gco_shape_matching.hpp
+					gco_shape_matching_pointwise.cpp
+					gco_shape_matching.cpp)
