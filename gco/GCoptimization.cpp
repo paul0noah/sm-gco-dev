@@ -1690,9 +1690,9 @@ void GCoptimization::printStatus1(const char* extraMsg)
 	if ( m_verbosity < 1 )
 		return;
 	if ( extraMsg )
-		printf("gco>> %s\n",extraMsg);
-	printf("gco>> initial energy: \tE=%lld (E=%lld+%lld+%lld)\n",(long long)compute_energy(),
-		(long long)giveDataEnergy(), (long long)giveSmoothEnergy(), (long long)giveLabelEnergy()); 
+		printf("[ gco ] %s\n",extraMsg);
+	printf("[ gco ] initial energy: \tE=%lld (E=%lld+%lld+%lld)\n",(long long)compute_energy(),
+		(long long)giveDataEnergy(), (long long)giveSmoothEnergy(), (long long)giveLabelEnergy());
 	flushnow(); 
 }
 
@@ -1701,7 +1701,7 @@ void GCoptimization::printStatus1(int cycle, bool isSwap, gcoclock_t ticks0)
 	if ( m_verbosity < 1 )
 		return;
 	gcoclock_t ticks1 = gcoclock();
-	printf("gco>> after cycle %2d: \tE=%lld (E=%lld+%lld+%lld);",cycle,(long long)compute_energy(),
+	printf("[ gco ] after cycle %2d: \tE=%lld (E=%lld+%lld+%lld);",cycle,(long long)compute_energy(),
 		(long long)giveDataEnergy(),(long long)giveSmoothEnergy(),(long long)giveLabelEnergy());
 	if ( m_stepsThisCycleTotal > 0 )
 		printf(isSwap ? " \t%d swaps(s);" : " \t%d expansions(s);",m_stepsThisCycleTotal);
@@ -1722,9 +1722,9 @@ void GCoptimization::printStatus2(int alpha, int beta, int numVars, gcoclock_t t
 		return;
 	int microsec = (int)(1000000*(gcoclock() - ticks0) / GCO_CLOCKS_PER_SEC);
 	if ( beta >= 0 )
-		printf("gco>>   after swap(%d,%d):",alpha+INDEX0,beta+INDEX0);
+		printf("[ gco ]   after swap(%d,%d):",alpha+INDEX0,beta+INDEX0);
 	else
-		printf("gco>>   after expansion(%d):",alpha+INDEX0);
+		printf("[ gco ]   after expansion(%d):",alpha+INDEX0);
 	printf(" \tE=%lld (E=%lld+%lld+%lld);\t %lld vars;",
 		(long long)compute_energy(),(long long)giveDataEnergy(),
 		(long long)giveSmoothEnergy(),(long long)giveLabelEnergy(),(long long)numVars);
