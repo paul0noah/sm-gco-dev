@@ -40,7 +40,7 @@ Eigen::MatrixXi GCOSM::pointWise(const bool smoothGeodesic) {
         int* data = new int[numVertices * numLables];
         for ( int i = 0; i < numVertices; i++ ) {
             for (int l = 0; l < numLables; l++ ) {
-                data[i * numLables + l] = SCALING_FACTOR * dataWeight * perVertexFeatureDifference(i, l);
+                data[i * numLables + l] = (int) (SCALING_FACTOR * dataWeight * perVertexFeatureDifference(i, l));
             }
         }
 
@@ -60,7 +60,7 @@ Eigen::MatrixXi GCOSM::pointWise(const bool smoothGeodesic) {
             }
 
         }
-        else {
+        else { // smooth l2
             smoothCost.setZero();
             for (int i = 0; i < VY.rows(); i++) {
                 for (int j = 0; j < VY.rows(); j++) {
