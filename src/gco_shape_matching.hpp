@@ -14,9 +14,9 @@ class GCOSM {
     std::string prefix;
     int numIters;
     float dataWeight;
-    const Eigen::MatrixXd VX;
+    Eigen::MatrixXd VX;
     const Eigen::MatrixXi FX;
-    const Eigen::MatrixXd VY;
+    Eigen::MatrixXd VY;
     const Eigen::MatrixXi FY;
     const Eigen::MatrixXd perVertexFeatureDifference; // should be |VX| x |VY|
 
