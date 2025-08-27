@@ -4,6 +4,11 @@
 #include <igl/triangle_triangle_adjacency.h>
 #include <igl/exact_geodesic.h>
 #include <igl/unique_rows.h>
+#include <chrono>
+
+#define GETTIME(x) std::chrono::steady_clock::time_point x = std::chrono::steady_clock::now()
+#define DURATION_MS(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count()
+#define DURATION_S(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count() / 1000
 
 namespace smgco {
 
@@ -104,6 +109,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
         gc->setVerbosity(1);
 
         std::cout << prefix << "Precomputing costs..." << std::endl;
+        GETTIME(t1);
         // Note this could be optimised
         int* data = new int[numVertices * numLables];
         for ( int i = 0; i < numVertices; i++ ) {
@@ -118,14 +124,17 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
 
 
         gc->setDataCost(data);
-        std::cout << prefix << " -> data cost done" << std::endl;
+        GETTIME(t2);
+        std::cout << prefix << " -> data cost done (" << DURATION_S(t1, t2) << " s)" << std::endl;
 
 
         GCOPointwiseExtra extraData;
+        extraData.costMode = costMode;
         precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraData);
         gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraData));
-        std::cout << prefix << " -> smooth cost done" << std::endl;
-        
+        GETTIME(t3);
+        std::cout << prefix << " -> smooth cost done (" << DURATION_S(t2, t3) << " s)" << std::endl;
+
 
         for (int f = 0; f < AdjFX.rows(); f++) {
             const int srcId = f;
@@ -139,8 +148,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
         }
 
         std::cout << prefix << "Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
+        GETTIME(t4);
         gc->expansion(numIters);
+        GETTIME(t5);
         std::cout << prefix << "After optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
+        std::cout << prefix << "Optimisation took: " << DURATION_S(t4, t5) << " s" << std::endl;
 
 
         for ( int  i = 0; i < numVertices; i++ ) {
