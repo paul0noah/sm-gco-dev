@@ -34,6 +34,55 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 }
 
 
+void precomputeSmoothCost(const Eigen::MatrixXd& VX,
+                          const Eigen::MatrixXi& FX,
+                          const Eigen::MatrixXd& VY,
+                          const Eigen::MatrixXi& FY,
+                          const Eigen::MatrixXi& lableSpace,
+                          GCOTrianglewiseExtra& extraData) {
+    Eigen::MatrixXf smoothVertexCost(VY.rows(), VY.rows());
+    const bool smoothGeodesic = false;
+    if (smoothGeodesic) {
+        Eigen::VectorXi VYsource, FS, VYTarget, FT;
+        // all vertices are source, and all are targets
+        VYsource.resize(1);
+        VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
+        Eigen::VectorXf d;
+        for (int i = 0; i  < VY.rows(); i++) {
+            VYsource(0) = i;
+            igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
+            smoothVertexCost.col(i) = d;
+        }
+
+    }
+    else { // smooth l2
+        smoothVertexCost.setZero();
+        for (int i = 0; i < VY.rows(); i++) {
+            for (int j = 0; j < VY.rows(); j++) {
+                smoothVertexCost(i, j) = (VY.row(i) - VY.row(j)).norm();
+            }
+        }
+    }
+
+    Eigen::MatrixXf smoothCost(lableSpace.rows(), lableSpace.rows());
+    for (int l1 = 0; l1 < lableSpace.rows(); l1++) {
+        const Eigen::VectorXi targetTri1 = lableSpace.row(l1);
+        for (int l2 = 0; l2 < lableSpace.rows(); l2++) {
+
+            const Eigen::VectorXi targetTri2 = lableSpace.row(l2);
+            const float diff0 = smoothVertexCost(targetTri1(0), targetTri2(0));
+            const float diff1 = smoothVertexCost(targetTri1(1), targetTri2(1));
+            const float diff2 = smoothVertexCost(targetTri1(2), targetTri2(2));
+            smoothCost(l1, l2) = std::max({diff0, diff1, diff2});
+        }
+    }
+
+    extraData.p2pDeformation = smoothCost;
+    extraData.FX = FX;
+    extraData.LableFY = lableSpace;
+}
+
+
 std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
     const int numVertices = FX.rows();
     const int numLables = 3 * FY.rows();
@@ -67,51 +116,13 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
             }
         }
 
+
         gc->setDataCost(data);
         std::cout << prefix << " -> data cost done" << std::endl;
 
-        Eigen::MatrixXf smoothVertexCost(VY.rows(), VY.rows());
-        const bool smoothGeodesic = false;
-        if (smoothGeodesic) {
-            Eigen::VectorXi VYsource, FS, VYTarget, FT;
-            // all vertices are source, and all are targets
-            VYsource.resize(1);
-            VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
-            Eigen::VectorXf d;
-            for (int i = 0; i  < VY.rows(); i++) {
-                VYsource(0) = i;
-                igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
-                smoothVertexCost.col(i) = d;
-            }
 
-        }
-        else { // smooth l2
-            smoothVertexCost.setZero();
-            for (int i = 0; i < VY.rows(); i++) {
-                for (int j = 0; j < VY.rows(); j++) {
-                    smoothVertexCost(i, j) = (VY.row(i) - VY.row(j)).norm();
-                }
-            }
-        }
         GCOPointwiseExtra extraData;
-
-        Eigen::MatrixXf smoothCost(lableSpace.rows(), lableSpace.rows());
-        for (int l1 = 0; l1 < lableSpace.rows(); l1++) {
-            const Eigen::VectorXi targetTri1 = lableSpace.row(l1);
-            for (int l2 = 0; l2 < lableSpace.rows(); l2++) {
-
-                const Eigen::VectorXi targetTri2 = lableSpace.row(l2);
-                const float diff0 = smoothVertexCost(targetTri1(0), targetTri2(0));
-                const float diff1 = smoothVertexCost(targetTri1(1), targetTri2(1));
-                const float diff2 = smoothVertexCost(targetTri1(2), targetTri2(2));
-                smoothCost(l1, l2) =std::max({diff0, diff1, diff2});
-            }
-        }
-        extraData.p2pDeformation = smoothCost;
-        extraData.FX = FX;
-        extraData.LableFY = lableSpace;
-
-
+        precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraData);
         gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraData));
         std::cout << prefix << " -> smooth cost done" << std::endl;
         
