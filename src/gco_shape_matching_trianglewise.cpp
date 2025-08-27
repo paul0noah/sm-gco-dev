@@ -19,7 +19,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
                                                          GCoptimization::LabelID l1,
                                                          GCoptimization::LabelID l2,
                                                          void* extraDataVoid) {
-    GCOTrianglewiseExtra* extraData = (GCOTrianglewiseExtra*)(extraDataVoid);
+    GCOTrianglewiseExtra* extraData = static_cast<GCOTrianglewiseExtra*>(extraDataVoid);
 
     /*const Eigen::VectorXi targetTri1 = extraData->LableFY.row(l1);
     const Eigen::VectorXi targetTri2 = extraData->LableFY.row(l2);
@@ -112,7 +112,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
         extraData.LableFY = lableSpace;
 
 
-        gc->setSmoothCost(smoothFnGCOSMTrianglewise, (void*)(&extraData));
+        gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraData));
         std::cout << prefix << " -> smooth cost done" << std::endl;
         
 

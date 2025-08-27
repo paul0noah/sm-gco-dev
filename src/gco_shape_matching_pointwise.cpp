@@ -15,7 +15,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMPointwise(GCoptimization::SiteID s1,
                                                       GCoptimization::LabelID l1,
                                                       GCoptimization::LabelID l2,
                                                       void* extraDataVoid) {
-    GCOPointwiseExtra* extraData = (GCOPointwiseExtra*)(extraDataVoid);
+    GCOPointwiseExtra* extraData = static_cast<GCOPointwiseExtra*>(extraDataVoid);
 
     const float diff = extraData->p2pDeformation(l1, l2);
 
@@ -72,7 +72,7 @@ Eigen::MatrixXi GCOSM::pointWise(const bool smoothGeodesic) {
         extraData.p2pDeformation = smoothCost;
 
 
-        gc->setSmoothCost(smoothFnGCOSMPointwise, (void*)(&extraData));
+        gc->setSmoothCost(smoothFnGCOSMPointwise, static_cast<void*>(&extraData));
 
         
 
