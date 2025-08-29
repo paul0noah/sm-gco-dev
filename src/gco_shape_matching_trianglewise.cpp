@@ -91,32 +91,8 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     }
 
 
-    return (int) (SCALING_FACTOR * diff);
-}
 
 
-/*
-
-
-
-
-
-
- */
-inline
-GCoptimization::EnergyTermType dataFnGCOSMTrianglewise(GCoptimization::SiteID s1,
-                                                       GCoptimization::LabelID l1,
-                                                       void* extraDataVoid) {
-    GCOTrianglewiseExtraData* extraData = static_cast<GCOTrianglewiseExtraData*>(extraDataVoid);
-
-    const int infinity = GCO_MAX_ENERGYTERM;
-    bool isFakeLable1;
-    isFakeLable(isFakeLable1, s1, l1, extraData->numLables);
-    if (isFakeLable1)
-        return infinity;
-    const int rowIndex1 = extraData->lableToIndex(l1, 0);
-    const int colIndex1 = extraData->lableToIndex(l1, 1);
-    return extraData->data(rowIndex1, colIndex1);
 }
 
 
@@ -276,7 +252,8 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
     result.block(0, 0, FX.rows(), 3) = FX;
 
     try{
-        GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numLables);
+        const int numFakeLables = FX.rows() * numLables;
+        GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numFakeLables);
         gc->setVerbosity(1);
 
         std::cout << prefix << "Precomputing costs..." << std::endl;
@@ -294,12 +271,18 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
         }
 
         Eigen::MatrixXi temp1(0, 0);
-        GCOTrianglewiseExtraData extraData(temp1);
-        extraData.data = data;
-        std::cout << extraData.data.rows() << ", " << extraData.data.cols() << std::endl;
-        extraData.numLables = numLables;
-        extraData.lableToIndex = lableToIndex;
-        gc->setDataCost(dataFnGCOSMTrianglewise, static_cast<void*>(&extraData));
+        for (int i = 0; i < numVertices; i++) {
+            for (int l = 0; l < numLables; l++) {
+                const int fakeLable = i * numLables + l;
+                const int numSites = 1;
+                GCoptimization::SparseDataCost* c = new GCoptimization::SparseDataCost[numSites];
+                c[0].site = i;
+                c[0].cost = data(i, l);
+                gc->setDataCost(fakeLable, c, numSites);
+            }
+        }
+
+
 
         GETTIME(t2);
         std::cout << prefix << " -> data cost done (" << DURATION_S(t1, t2) << " s)" << std::endl;
@@ -333,7 +316,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
 
 
         for ( int  i = 0; i < numVertices; i++ ) {
-            const int lable = gc->whatLabel(i);
+            const int lable = gc->whatLabel(i) - i * numLables;
+            if (lable < 0 || lable > numLables) {
+                std::cout << prefix << "optimisation led to fake-lable for triangle " << i << ", skipping output writing" << std::endl;
+                continue;
+            }
             for (int j = 0; j < 3; j++) {
                 result(i, j+3) = lableSpace(lable, j);
             }
@@ -341,7 +328,6 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
 
 
         delete gc;
-        delete[] data;
     }
     catch (GCException e){
         e.Report();
