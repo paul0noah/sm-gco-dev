@@ -30,6 +30,15 @@ typedef struct GCOTrianglewiseExtra {
     TupleMatrixInt commonVXofFX;
     Eigen::MatrixX<Eigen::Quaterniond> quaternoinsXtoY;
 } GCOPointwiseExtra;
+typedef struct GCOTrianglewiseExtraData {
+    COST_MODE costMode;
+    Eigen::MatrixXi data;
+    Eigen::MatrixXi lableToIndex;
+    int numLables;
+    GCOTrianglewiseExtraData(Eigen::MatrixXi& temp0) : data(temp0), lableToIndex(temp0) {
+    }
+} GCOTrianglewiseExtraData;
+
 
 
 inline
@@ -84,6 +93,38 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
     return (int) (SCALING_FACTOR * diff);
 }
+
+
+/*
+
+
+
+
+
+
+ */
+inline
+GCoptimization::EnergyTermType dataFnGCOSMTrianglewise(GCoptimization::SiteID s1,
+                                                       GCoptimization::LabelID l1,
+                                                       void* extraDataVoid) {
+    GCOTrianglewiseExtraData* extraData = static_cast<GCOTrianglewiseExtraData*>(extraDataVoid);
+
+    const int infinity = GCO_MAX_ENERGYTERM;
+    bool isFakeLable1;
+    isFakeLable(isFakeLable1, s1, l1, extraData->numLables);
+    if (isFakeLable1)
+        return infinity;
+    const int rowIndex1 = extraData->lableToIndex(l1, 0);
+    const int colIndex1 = extraData->lableToIndex(l1, 1);
+    return extraData->data(rowIndex1, colIndex1);
+}
+
+
+/*
+
+
+
+
 
 
 void precomputeSmoothCost(const Eigen::MatrixXd& VX,
@@ -241,19 +282,25 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
         std::cout << prefix << "Precomputing costs..." << std::endl;
         GETTIME(t1);
         // Note this could be optimised
-        int* data = new int[numVertices * numLables];
+        Eigen::MatrixXi data(numVertices, numLables);
         for ( int i = 0; i < numVertices; i++ ) {
             for (int l = 0; l < numLables; l++ ) {
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
                     sum += perVertexFeatureDifference(FX(i, j), lableSpace(l, j));
                 }
-                data[i * numLables + l] = (int) (SCALING_FACTOR * dataWeight * sum);
+                data(i, l) = (int) (SCALING_FACTOR * dataWeight * sum);
             }
         }
 
+        Eigen::MatrixXi temp1(0, 0);
+        GCOTrianglewiseExtraData extraData(temp1);
+        extraData.data = data;
+        std::cout << extraData.data.rows() << ", " << extraData.data.cols() << std::endl;
+        extraData.numLables = numLables;
+        extraData.lableToIndex = lableToIndex;
+        gc->setDataCost(dataFnGCOSMTrianglewise, static_cast<void*>(&extraData));
 
-        gc->setDataCost(data);
         GETTIME(t2);
         std::cout << prefix << " -> data cost done (" << DURATION_S(t1, t2) << " s)" << std::endl;
 
