@@ -5,6 +5,8 @@
 #include <igl/exact_geodesic.h>
 #include <igl/unique_rows.h>
 #include <igl/per_vertex_normals.h>
+#include <igl/barycenter.h>
+
 #include <chrono>
 
 #define GETTIME(x) std::chrono::steady_clock::time_point x = std::chrono::steady_clock::now()
@@ -12,7 +14,12 @@
 #define DURATION_S(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count() / 1000
 #define PRINT_SMGCO(x) std::cout << prefix << x << std::endl;
 
-typedef Eigen::MatrixX<std::tuple<int, int, int, int>> TupleMatrixInt;
+#define isFakeLable(isFakeLable, s1, l1, numLables) {\
+const int realLableIdMin =  s1 * numLables;\
+const int realLableIdMax = (s1+1) * numLables;\
+isFakeLable = l1 < realLableIdMin || l1 >= realLableIdMax;}
+
+typedef Eigen::MatrixX<std::tuple<int, int>> TupleMatrixInt;
 
 namespace smgco {
 
@@ -20,17 +27,36 @@ enum COST_MODE {
     SINGLE_LABLE_SPACE_L2,
     MULTIPLE_LABLE_SPACE_L2,
     MULTIPLE_LABLE_SPACE_SO3,
+    MULTIPLE_LABLE_SPACE_SE3,
 };
 
 typedef struct GCOTrianglewiseExtra {
     COST_MODE costMode;
     // not all of the below matrices are needed for all cost modes
+    int numLables;
     Eigen::MatrixXf p2pDeformation;
+    Eigen::MatrixXf VX;
     Eigen::MatrixXi FX;
     Eigen::MatrixXi LableFY;
     TupleMatrixInt commonVXofFX;
-    Eigen::MatrixX<Eigen::Quaterniond> quaternoinsXtoY;
-} GCOPointwiseExtra;
+    Eigen::MatrixX<Eigen::Quaterniond>& quaternoinsXtoY;
+    Eigen::MatrixX<Eigen::Vector3f>& translationsXtoY;
+    Eigen::MatrixXi lableToIndex;
+    GCOTrianglewiseExtra(Eigen::MatrixXf& temp0,
+                         Eigen::MatrixXi& temp1,
+                         TupleMatrixInt& temp2,
+                         Eigen::MatrixX<Eigen::Quaterniond>& temp3,
+                         Eigen::MatrixX<Eigen::Vector3f>& temp4) :
+        p2pDeformation(temp0),
+        FX(temp1),
+        LableFY(temp1),
+        commonVXofFX(temp2),
+        quaternoinsXtoY(temp3),
+        lableToIndex(temp1),
+        translationsXtoY(temp4) {
+    };
+} GCOTrianglewiseExtra;
+
 typedef struct GCOTrianglewiseExtraData {
     COST_MODE costMode;
     Eigen::MatrixXi data;
@@ -79,24 +105,65 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
             diff = def1;
     }
     else if (costMode == MULTIPLE_LABLE_SPACE_SO3) {
-        const Eigen::Quaterniond rotation1 = extraData->quaternoinsXtoY(s1, l1);
-        const Eigen::Quaterniond rotation2 = extraData->quaternoinsXtoY(s2, l2);
+        const int rowIndex1 = extraData->lableToIndex(l1, 0);
+        const int rowIndex2 = extraData->lableToIndex(l2, 0);
+        const int colIndex1 = extraData->lableToIndex(l1, 1);
+        const int colIndex2 = extraData->lableToIndex(l2, 1);
+        const Eigen::Quaterniond rotation1 = extraData->quaternoinsXtoY(rowIndex1, colIndex1);
+        const Eigen::Quaterniond rotation2 = extraData->quaternoinsXtoY(rowIndex2, colIndex2);
         double innerProductRot = fabs(rotation1.w() * rotation2.w() + rotation1.vec().dot(rotation2.vec()));
-        if (innerProductRot > 1 || innerProductRot < -1) {
-            std::cout << innerProductRot << std::endl;
-        }
         innerProductRot = std::max(std::min(1.0, innerProductRot), -1.0); // clip into value range [-1, ..., 1]
 
-        diff = 2 * acos(innerProductRot);
-        std::cout << s1 << ", " << s2 << ": " << ", " << l1 << ", " << l2 << ", " << diff << std::endl;
+        //diff = 2 * acos(innerProductRot);
+        diff = acos(innerProductRot);
+        //std::cout << s1 << ", " << s2 << ": " << ", " << l1 << ", " << l2 << ", " << diff << std::endl;
+    }
+    else if (costMode == MULTIPLE_LABLE_SPACE_SE3) {
+        const int rowIndex1 = extraData->lableToIndex(l1, 0);
+        const int rowIndex2 = extraData->lableToIndex(l2, 0);
+        const int colIndex1 = extraData->lableToIndex(l1, 1);
+        const int colIndex2 = extraData->lableToIndex(l2, 1);
+        const Eigen::Quaterniond rotation1 = extraData->quaternoinsXtoY(rowIndex1, colIndex1);
+        const Eigen::Matrix3f rot1 = rotation1.toRotationMatrix().cast<float>();
+        const Eigen::Quaterniond rotation2 = extraData->quaternoinsXtoY(rowIndex2, colIndex2);
+        const Eigen::Matrix3f rot2 = rotation2.toRotationMatrix().cast<float>();
+
+        const std::tuple<int, int> commonVerticesBetweenSites = extraData->commonVXofFX(s1, s2);
+        const int idxX1 = std::get<0>(commonVerticesBetweenSites);
+        const int idxX2 = std::get<1>(commonVerticesBetweenSites);
+
+        const Eigen::Vector3f tranlsation1 = extraData->translationsXtoY(rowIndex1, colIndex1);
+        const Eigen::Vector3f tranlsation2 = extraData->translationsXtoY(rowIndex2, colIndex2);
+
+        double innerProductRot = fabs(rotation1.w() * rotation2.w() + rotation1.vec().dot(rotation2.vec()));
+        innerProductRot = std::max(std::min(1.0, innerProductRot), -1.0); // clip into value range [-1, ..., 1]
+
+
+        const Eigen::Vector3f vert1 = extraData->VX.row(idxX1);
+        const Eigen::Vector3f vert2 = extraData->VX.row(idxX2);
+
+        const Eigen::Vector3f defVert1_1 = rot1 * vert1 + tranlsation1;
+        const Eigen::Vector3f defVert2_1 = rot1 * vert2 + tranlsation1;
+
+        const Eigen::Vector3f defVert1_2 = rot2 * vert2 + tranlsation2;
+        const Eigen::Vector3f defVert2_2 = rot2 * vert2 + tranlsation2;
+
+        const float l2norm11_12 = (defVert1_1 - defVert1_2).norm();
+        const float l2norm11_22 = (defVert1_1 - defVert2_2).norm();
+        const float l2norm21_12 = (defVert2_1 - defVert1_2).norm();
+        const float l2norm21_22 = (defVert2_1 - defVert2_2).norm();
+
+        const float maxDeform = std::max({l2norm11_12, l2norm11_22, l2norm21_12, l2norm21_22});
+
+        //diff = 2 * acos(innerProductRot);
+        //diff = acos(innerProductRot) + maxDeform;
+
+        diff = maxDeform;
     }
 
 
-
-
+    return (int) (SCALING_FACTOR * diff);
 }
-
-
 /*
 
 
@@ -168,64 +235,103 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
         extraData.p2pDeformation = p2pDeformation;
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_SO3) {
-        Eigen::MatrixXd NX, NY;
+    if (costMode == MULTIPLE_LABLE_SPACE_SO3 || costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3) {
+        std::cout << "TODO: take care of other lable space definitions for normals" << std::endl;
+        Eigen::MatrixXd NX, NY, TriCentroidsX, TriCentroidsY;
         igl::per_face_normals(VX, FX, NX);
         igl::per_face_normals(VY, FY, NY);
-        std::cout << "TODO: take care of other lable space definitions for normals" << std::endl;
-        Eigen::MatrixXd EX0 = (VX(FX.col(0), Eigen::all) - VX(FX.col(1), Eigen::all)).rowwise().normalized();
+
+        igl::barycenter(VX, FX, TriCentroidsX);
+        igl::barycenter(VY, FY, TriCentroidsY);
+
+        const bool globalTrafo = true;
+        if (!globalTrafo) {
+            TriCentroidsX.setZero();
+            TriCentroidsY.setZero();
+        }
+
+
+        Eigen::MatrixXd EX0 = TriCentroidsX + (VX(FX.col(0), Eigen::all) - VX(FX.col(1), Eigen::all)).rowwise().normalized();
+        //Eigen::MatrixXd EX1 = TriCentroidsX + (VX(FX.col(2), Eigen::all) - VX(FX.col(1), Eigen::all)).rowwise().normalized();
         Eigen::MatrixXd EX1(EX0.rows(), EX0.cols());
         for (int i = 0; i < EX0.rows(); i++) {
             const Eigen::Vector3d e = EX0.row(i);
             const Eigen::Vector3d n = NX.row(i);
-            EX1.row(i) = (e.cross(n)).normalized();
+            EX1.row(i) = TriCentroidsX.row(i) + (e.cross(n)).normalized().transpose();
         }
-        //Eigen::MatrixXd EX1 = (VX(FX.col(2), Eigen::all) - VX(FX.col(1), Eigen::all)).rowwise().normalized();
+
         Eigen::MatrixXd EY0 = (VY(lableSpace.col(0), Eigen::all) - VY(lableSpace.col(1), Eigen::all)).rowwise().normalized();
+        //Eigen::MatrixXd EY1 = (VY(lableSpace.col(2), Eigen::all) - VY(lableSpace.col(1), Eigen::all)).rowwise().normalized();
+        //for (int i = 0; i < 3; i++) {
+        //    EY1.block(i * FY.rows(), 0, FY.rows(), 3) = TriCentroidsY + EY1.block(i * FY.rows(), 0, FY.rows(), 3);
+        //}
         Eigen::MatrixXd EY1(EY0.rows(), EY0.cols());
-        for (int i = 0; i < lableSpace.rows(); i++) {
+        for (int i = 0; i < EY0.rows(); i++) {
             const Eigen::Vector3d e = EY0.row(i);
             const int fy = i % FY.rows();
             const Eigen::Vector3d n = NY.row(fy);
-            EY1.row(i) = (e.cross(n)).normalized();
+            EY1.row(i) = TriCentroidsY.row(fy) + (e.cross(n)).normalized().transpose();
         }
-        //Eigen::MatrixXd EY1 = (VY(lableSpace.col(2), Eigen::all) - VY(lableSpace.col(1), Eigen::all)).rowwise().normalized();
 
         Eigen::MatrixX<Eigen::Quaterniond> quaternoinsXtoY(FX.rows(), lableSpace.rows());
+        Eigen::MatrixX<Eigen::Vector3f> tranlastionsXtoY(FX.rows(), lableSpace.rows());
         for (int x = 0; x < FX.rows(); x++) {
 
             for (int l = 0; l < lableSpace.rows(); l++) {
                 const int fy = l % FY.rows();
-                const Eigen::Matrix3d localCoordinateSysX = (Eigen::Matrix3d() << NX.row(x), EX0.row(x), EX1.row(x)).finished();
-                std::cout << NX.row(x) << std::endl;
-                assert(std::abs(localCoordinateSysX.row(0).dot(localCoordinateSysX.row(1))) < 1e-6);
-                assert(std::abs(localCoordinateSysX.row(0).dot(localCoordinateSysX.row(2))) < 1e-6);
-                assert(std::abs(localCoordinateSysX.row(1).dot(localCoordinateSysX.row(2))) < 1e-6);
+                const Eigen::Matrix3d pointsX = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsX.row(x), EX0.row(x), EX1.row(x)).finished() :
+                                                              (Eigen::Matrix3d() << NX.row(x), EX0.row(x), EX1.row(x)).finished() ;
+                const Eigen::Matrix3d pointsY = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsY.row(fy), EY0.row(l), EY1.row(l)).finished() :
+                                                              (Eigen::Matrix3d() << NY.row(fy), EY0.row(l), EY1.row(l)).finished() ;
+
+                /*std::cout << pointsY.row(0).dot(pointsY.row(1)) << std::endl;
+                std::cout << pointsY.row(0).dot(pointsY.row(2)) << std::endl;
+                std::cout << pointsY.row(1).dot(pointsY.row(2)) << std::endl;
+                std::cout << pointsX << std::endl;
+                std::cout << pointsY << std::endl;*/
 
 
-                const Eigen::Matrix3d localCoordinateSysY = (Eigen::Matrix3d() << NY.row(fy), EY0.row(l), EY1.row(l)).finished();
-                assert(std::abs(localCoordinateSysY.row(0).dot(localCoordinateSysY.row(1))) < 1e-6);
-                assert(std::abs(localCoordinateSysY.row(0).dot(localCoordinateSysY.row(2))) < 1e-6);
-                assert(std::abs(localCoordinateSysY.row(1).dot(localCoordinateSysY.row(2))) < 1e-6);
+                if (globalTrafo) {
+                    const auto tform = Eigen::umeyama(pointsY.transpose(), pointsX.transpose(), false);
+                    const Eigen::Matrix3d rot = tform.block(0, 0, 3, 3);
+                    const Eigen::Vector3d translation = tform.block(0, 3, 3, 1);
+                    /*std::cout << rot << std::endl;
+                    std::cout << translation << std::endl;
 
-                // see e.g. 4. here: https://igl.ethz.ch/projects/ARAP/svd_rot.pdf
-                Eigen::JacobiSVD<Eigen::Matrix3d> svd(localCoordinateSysX * localCoordinateSysY.transpose(), Eigen::ComputeFullU | Eigen::ComputeFullV);
+                    for (int i = 0; i < 3; i++) {
+                        const Eigen::Vector3d x = pointsX.row(i);
+                        const Eigen::Vector3d y = pointsY.row(i);
+                        std::cout << x - rot * y - translation << std::endl;
+                        std::cout << y - rot * x - translation << std::endl;
+                    }*/
+                    assert (std::abs(rot.determinant() - 1.0) <= 1e-6);
+                    quaternoinsXtoY(x, l) = Eigen::Quaterniond(rot);
+                    tranlastionsXtoY(x, l) = translation.cast<float>();
+                }
+                else {
+                    // see e.g. 4. here: https://igl.ethz.ch/projects/ARAP/svd_rot.pdf
+                    Eigen::JacobiSVD<Eigen::Matrix3d> svd(pointsX * pointsY.transpose(), Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-                const double detuv = ( svd.matrixV() * (svd.matrixU().transpose()) ).determinant();
-                const Eigen::DiagonalMatrix<double, 3> d(1, 1, detuv);
-                const Eigen::Matrix3d rot = svd.matrixV() * d * (svd.matrixU().transpose());
-                assert (std::abs(rot.determinant() - 1.0) <= 1e-6);
+                    const double detuv = ( svd.matrixV() * (svd.matrixU().transpose()) ).determinant();
+                    const Eigen::DiagonalMatrix<double, 3> d(1, 1, detuv);
+                    const Eigen::Matrix3d rot = svd.matrixV() * d * (svd.matrixU().transpose());
 
+                    /*for (int i = 0; i < 3; i++) {
+                        const Eigen::Vector3d x = pointsX.row(i);
+                        const Eigen::Vector3d y = pointsY.row(i);
+                        std::cout << x - rot * y << std::endl;
+                        std::cout << y - rot * x << std::endl;
+                        std::cout << x - rot.transpose() * y << std::endl;
+                        std::cout << y - rot.transpose() * x << std::endl;
+                    }*/
+                    quaternoinsXtoY(x, l) = Eigen::Quaterniond(rot);
 
-                std::cout << "localCoordinateSysX" << std::endl;
-                std::cout << localCoordinateSysX << std::endl;
-                std::cout << "localCoordinateSysY" << std::endl;
-                std::cout << localCoordinateSysY << std::endl;
-                std::cout << rot << std::endl;
-                quaternoinsXtoY(x, l) = Eigen::Quaterniond(rot);
+                }
+
             }
         }
         extraData.quaternoinsXtoY = quaternoinsXtoY;
+        extraData.translationsXtoY = tranlastionsXtoY;
 
     }
 
@@ -284,7 +390,13 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
             }
         }
 
+        Eigen::MatrixXf temp0(0, 0);
         Eigen::MatrixXi temp1(0, 0);
+        TupleMatrixInt temp2(0, 0);
+        Eigen::MatrixX<Eigen::Quaterniond> temp3(0, 0);
+        Eigen::MatrixX<Eigen::Vector3f> temp4(0, 0);
+
+
         for (int i = 0; i < numVertices; i++) {
             for (int l = 0; l < numLables; l++) {
                 const int fakeLable = i * numLables + l;
@@ -302,10 +414,13 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
         PRINT_SMGCO(" -> data cost done (" << DURATION_S(t1, t2) << " s)");
 
 
-        GCOPointwiseExtra extraData;
-        extraData.costMode = costMode;
-        precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraData);
-        gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraData));
+        GCOTrianglewiseExtra extraSmooth(temp0, temp1, temp2, temp3, temp4);
+        extraSmooth.costMode = costMode;
+        extraSmooth.numLables = numLables;
+        extraSmooth.lableToIndex = lableToIndex;
+        extraSmooth.VX = VX.cast<float>();
+        precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraSmooth);
+        gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraSmooth));
         GETTIME(t3);
         PRINT_SMGCO(" -> smooth cost done (" << DURATION_S(t2, t3) << " s)");
 
