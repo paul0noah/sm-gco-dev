@@ -10,6 +10,7 @@
 #define GETTIME(x) std::chrono::steady_clock::time_point x = std::chrono::steady_clock::now()
 #define DURATION_MS(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count()
 #define DURATION_S(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count() / 1000
+#define PRINT_SMGCO(x) std::cout << prefix << x << std::endl;
 
 typedef Eigen::MatrixX<std::tuple<int, int, int, int>> TupleMatrixInt;
 
@@ -266,8 +267,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
         GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numFakeLables);
         gc->setVerbosity(1);
 
-        std::cout << prefix << "Precomputing costs..." << std::endl;
+        PRINT_SMGCO("Precomputing helpers...");
         GETTIME(t1);
+        PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
+        PRINT_SMGCO("Precomputing costs...");
+
         // Note this could be optimised
         Eigen::MatrixXi data(numVertices, numLables);
         for ( int i = 0; i < numVertices; i++ ) {
@@ -295,7 +299,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
 
 
         GETTIME(t2);
-        std::cout << prefix << " -> data cost done (" << DURATION_S(t1, t2) << " s)" << std::endl;
+        PRINT_SMGCO(" -> data cost done (" << DURATION_S(t1, t2) << " s)");
 
 
         GCOPointwiseExtra extraData;
@@ -303,7 +307,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
         precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraData);
         gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraData));
         GETTIME(t3);
-        std::cout << prefix << " -> smooth cost done (" << DURATION_S(t2, t3) << " s)" << std::endl;
+        PRINT_SMGCO(" -> smooth cost done (" << DURATION_S(t2, t3) << " s)");
 
 
         for (int f = 0; f < AdjFX.rows(); f++) {
@@ -318,17 +322,18 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
         }
 
         std::cout << prefix << "Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
+        PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         GETTIME(t4);
         gc->expansion(numIters);
         GETTIME(t5);
-        std::cout << prefix << "After optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
-        std::cout << prefix << "Optimisation took: " << DURATION_S(t4, t5) << " s" << std::endl;
+        PRINT_SMGCO("After optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
+        PRINT_SMGCO("Optimisation took: " << DURATION_S(t4, t5) << " s");
 
 
         for ( int  i = 0; i < numVertices; i++ ) {
             const int lable = gc->whatLabel(i) - i * numLables;
             if (lable < 0 || lable > numLables) {
-                std::cout << prefix << "optimisation led to fake-lable for triangle " << i << ", skipping output writing" << std::endl;
+                PRINT_SMGCO("optimisation led to fake-lable for triangle " << i << ", skipping output writing");
                 continue;
             }
             for (int j = 0; j < 3; j++) {
