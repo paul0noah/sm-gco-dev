@@ -232,9 +232,19 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
     extraData.LableFY = lableSpace;
 }
 
+/*
 
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
-    const COST_MODE costMode = MULTIPLE_LABLE_SPACE_SO3;
+
+
+
+
+
+ */
+std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costModeInt) {
+    const bool setInitialLables = false;
+
+    const COST_MODE costMode = static_cast<COST_MODE>(costModeInt);
+    std::cout << prefix << "Using cost mode = " << costMode << std::endl;
 
     const int numVertices = FX.rows();
     const int numLables = 3 * FY.rows();
