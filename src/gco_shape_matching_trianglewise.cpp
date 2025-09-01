@@ -28,6 +28,7 @@ enum COST_MODE {
     MULTIPLE_LABLE_SPACE_L2,
     MULTIPLE_LABLE_SPACE_SO3,
     MULTIPLE_LABLE_SPACE_SE3,
+    MULTIPLE_LABLE_SPACE_GEODIST,
 };
 
 typedef struct GCOTrianglewiseExtra {
@@ -42,6 +43,7 @@ typedef struct GCOTrianglewiseExtra {
     Eigen::MatrixX<Eigen::Quaterniond>& quaternoinsXtoY;
     Eigen::MatrixX<Eigen::Vector3f>& translationsXtoY;
     Eigen::MatrixXi lableToIndex;
+    Eigen::MatrixXf geoDistY;
     GCOTrianglewiseExtra(Eigen::MatrixXf& temp0,
                          Eigen::MatrixXi& temp1,
                          TupleMatrixInt& temp2,
@@ -159,6 +161,24 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         //diff = acos(innerProductRot) + maxDeform;
 
         diff = maxDeform;
+    else if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
+        const std::tuple<int, int> commonVerticesBetweenTriangles = extraData->commonVXofFX(s1, s2);
+        const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
+        const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);
+        const int realLableIndex1 = extraData->lableToIndex(l1, 1);
+        const int realLableIndex2 = extraData->lableToIndex(l2, 1);
+        int colIdx11 = -1, colIdx12 = -1, colIdx21 = -1, colIdx22 = -1;
+        for (int j = 0; j < 3; j++) {
+            if (extraData->FX(s1, j) == idxX1) colIdx11 = j;
+            if (extraData->FX(s1, j) == idxX2) colIdx12 = j;
+            if (extraData->FX(s2, j) == idxX1) colIdx21 = j;
+            if (extraData->FX(s2, j) == idxX2) colIdx22 = j;
+        }
+        const int targetVertex1_1 = extraData->LableFY(realLableIndex1, colIdx11);
+        const int targetVertex1_2 = extraData->LableFY(realLableIndex1, colIdx12);
+        const int targetVertex2_1 = extraData->LableFY(realLableIndex2, colIdx21);
+        const int targetVertex2_2 = extraData->LableFY(realLableIndex2, colIdx22);
+        diff = extraData->geoDistY(targetVertex1_1, targetVertex2_1) + extraData->geoDistY(targetVertex1_2, targetVertex2_2);
     }
 
 
@@ -205,7 +225,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         }
         extraData.p2pDeformation = smoothCost;
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_L2) {
+    if (costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3 || costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
         TupleMatrixInt commonVertices(FX.rows(), FX.rows());
         Eigen::MatrixXi AdjFX;
         igl::triangle_triangle_adjacency(FX, AdjFX);
@@ -222,12 +242,11 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
                     for (int jj = 0; jj < 3; jj++) {
                         const int vj = FX(j, jj);
                         if (vi == vj) {
-                            intersection.push_back(ii);
-                            intersection.push_back(jj);
+                            intersection.push_back(vi);
                         }
                     }
                 }
-                commonVertices(i, j) = std::make_tuple(intersection[0], intersection[1], intersection[2], intersection[3]);
+                commonVertices(i, j) = std::make_tuple(intersection[0], intersection[1]);
                 intersection.clear();
             }
         }
@@ -334,6 +353,20 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.translationsXtoY = tranlastionsXtoY;
 
     }
+    if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
+        Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
+        Eigen::VectorXi VYsource, FS, VYTarget, FT;
+        // all vertices are source, and all are targets
+        VYsource.resize(1);
+        VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
+        Eigen::VectorXf d;
+        for (int i = 0; i  < VY.rows(); i++) {
+            VYsource(0) = i;
+            igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
+            geoDistY.col(i) = d;
+        }
+        extraData.geoDistY = geoDistY;
+    }
 
     extraData.FX = FX;
     extraData.LableFY = lableSpace;
@@ -374,6 +407,16 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
         gc->setVerbosity(1);
 
         PRINT_SMGCO("Precomputing helpers...");
+        GETTIME(t0);
+        Eigen::MatrixXi lableToIndex(numFakeLables, 2);
+        for (int lf = 0; lf < numFakeLables; lf++) {
+            const int rowIndex = lf / numLables;
+            const int colIndex = lf - rowIndex * numLables;
+            lableToIndex.row(lf) << rowIndex, colIndex ;
+        }
+
+
+
         GETTIME(t1);
         PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
         PRINT_SMGCO("Precomputing costs...");
@@ -436,7 +479,15 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
             }
         }
 
-        std::cout << prefix << "Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
+        if (setInitialLables) {
+            PRINT_SMGCO("Setting initial lables");
+            for (int i = 0; i < numVertices; i++) {
+                int minIndex = -1;
+                data.row(i).minCoeff(&minIndex);
+                gc->setLabel(i, minIndex + i * numLables);
+            }
+        }
+
         PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         GETTIME(t4);
         gc->expansion(numIters);
