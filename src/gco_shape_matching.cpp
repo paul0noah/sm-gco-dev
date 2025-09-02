@@ -31,4 +31,8 @@ void GCOSM::setDataWeight(const float newDataWeight) {
     dataWeight = newDataWeight;
 }
 
+void GCOSM::setMaxIter(const int newMaxIter) {
+    numIters = newMaxIter;
+}
+
 } // namespace smgco

@@ -19,4 +19,5 @@ PYBIND11_MODULE(sm_gco, handle) {
     myclass.def("point_wise", &smgco::GCOSM::pointWise);
     myclass.def("triangle_wise", &smgco::GCOSM::triangleWise);
     myclass.def("set_data_weight", &smgco::GCOSM::setDataWeight);
+    myclass.def("set_max_iter", &smgco::GCOSM::setMaxIter);
 }
