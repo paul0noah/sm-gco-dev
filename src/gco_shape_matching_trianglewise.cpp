@@ -23,7 +23,6 @@ namespace smgco {
  */
 std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costModeInt) {
     const bool setInitialLables = true;
-    const int maxIter = 100;
 
     const COST_MODE costMode = static_cast<COST_MODE>(costModeInt);
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;

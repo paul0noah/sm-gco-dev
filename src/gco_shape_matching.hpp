@@ -34,13 +34,6 @@ typedef struct GCOTrianglewiseExtra {
     Eigen::MatrixXf geoDistY;
 } GCOTrianglewiseExtra;
 
-typedef struct GCOTrianglewiseExtraData {
-    COST_MODE costMode;
-    Eigen::MatrixXi data;
-    Eigen::MatrixXi lableToIndex;
-    int numLables;
-} GCOTrianglewiseExtraData;
-
 
 
 class GCOSM {
