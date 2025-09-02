@@ -85,10 +85,6 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
 
  */
-#define isFakeLable(isFakeLable, s1, l1, numLables) {\
-const int realLableIdMin =  s1 * numLables;\
-const int realLableIdMax = (s1+1) * numLables;\
-isFakeLable = l1 < realLableIdMin || l1 >= realLableIdMax;}
 inline
 GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID s1,
                                                          GCoptimization::SiteID s2,
@@ -97,14 +93,6 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
                                                          void* extraDataVoid) {
     GCOTrianglewiseExtra* extraData = static_cast<GCOTrianglewiseExtra*>(extraDataVoid);
     const COST_MODE costMode = extraData->costMode;
-    bool isFakeLable1, isFakeLable2;
-    int realS1, realS2, realL1, realL2;
-    if (costMode != SINGLE_LABLE_SPACE_L2) {
-        isFakeLable(isFakeLable1, s1, l1, extraData->numLables);
-        isFakeLable(isFakeLable2, s2, l2, extraData->numLables);
-        realL1 = l1 - s1 * extraData->numLables;
-        realL2 = l2 - s2 * extraData->numLables;
-    }
 
 
     float diff = 0;
