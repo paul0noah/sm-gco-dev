@@ -18,10 +18,25 @@ enum COST_MODE {
     MULTIPLE_LABLE_SPACE_GEODIST,
 };
 
+struct TriangleWiseOpts {
+    COST_MODE costMode = COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST;
+    float smoothScaleBeforeRobust = 1.0;
+    bool robustCost = false;
+    bool setInitialLables = true;
+    float lambdaSe3 = 1.0;
+    float lambdaSo3 = 1.0;
+    float unaryWeight = 1.0;
+    float smoothWeight = 1.0;
+    int lableSpaceCycleSize = 6;
+    float lableSpaceAngleThreshold = M_PI / 2;
+    bool lableSpaceDegnerate = true;
+};
+
 typedef struct GCOTrianglewiseExtra {
     COST_MODE costMode;
     // not all of the below matrices are needed for all cost modes
     float lambda;
+    TriangleWiseOpts opts;
     int numLables;
     Eigen::MatrixXf p2pDeformation;
     Eigen::MatrixXf VX;
@@ -56,7 +71,8 @@ class GCOSM {
     void printName();
 
     Eigen::MatrixXi pointWise(const bool smoothGeodesic=false);
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(const int costMode);
+    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
+    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
 
     void setDataWeight(const float newDataWeight);
     void setMaxIter(const int newMaxIter);
@@ -90,6 +106,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
                                                          GCoptimization::LabelID l2,
                                                          void* extraDataVoid) {
     GCOTrianglewiseExtra* extraData = static_cast<GCOTrianglewiseExtra*>(extraDataVoid);
+    const TriangleWiseOpts opts = extraData->opts;
     const COST_MODE costMode = extraData->costMode;
 
 

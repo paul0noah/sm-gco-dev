@@ -21,10 +21,10 @@ namespace smgco {
 
 
  */
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costModeInt) {
-    const bool setInitialLables = true;
+std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
+    const bool setInitialLables = opts.setInitialLables;
 
-    const COST_MODE costMode = static_cast<COST_MODE>(costModeInt);
+    const COST_MODE costMode = opts.costMode;
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
 
     const int numVertices = FX.rows();
@@ -168,6 +168,12 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
     igl::unique_rows(p2p, p2p_unique, IA, IC);
 
     return std::make_tuple(p2p_unique, result);
+}
+
+
+std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
+    TriangleWiseOpts opts;
+    return triangleWise(opts);
 }
 
 } // namespace smgco
