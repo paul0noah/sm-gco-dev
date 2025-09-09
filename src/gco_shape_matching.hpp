@@ -119,15 +119,6 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         const std::tuple<int, int> commonVerticesBetweenSites = extraData->commonVXofFX(s1, s2);
         const int idxX1 = std::get<0>(commonVerticesBetweenSites);
         const int idxX2 = std::get<1>(commonVerticesBetweenSites);
-        //const int s1id1 = std::get<2>(commonVerticesBetweenSites);
-        //const int s2id1 = std::get<3>(commonVerticesBetweenSites);
-
-        /*const int s1vy0 = extraData->LableFY(l1, s1id0);
-         const int s1vy1 = extraData->LableFY(l1, s1id1);
-         const int s2vy0 = extraData->LableFY(l2, s2id0);
-         const int s2vy1 = extraData->LableFY(l2, s2id1);*/
-
-
         const int rowIndex1 = extraData->lableToIndex(l1, 0);
         const int rowIndex2 = extraData->lableToIndex(l2, 0);
         const int colIndex1 = extraData->lableToIndex(l1, 1);
@@ -158,9 +149,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         double innerProductRot = fabs(rotation1.w() * rotation2.w() + rotation1.vec().dot(rotation2.vec()));
         innerProductRot = std::max(std::min(1.0, innerProductRot), -1.0); // clip into value range [-1, ..., 1]
 
-        //diff = 2 * acos(innerProductRot);
-        diff = acos(innerProductRot);
-        //std::cout << s1 << ", " << s2 << ": " << ", " << l1 << ", " << l2 << ", " << diff << std::endl;
+        diff = 2 * acos(innerProductRot);
     }
     else if (costMode == MULTIPLE_LABLE_SPACE_SE3) {
         const int rowIndex1 = extraData->lableToIndex(l1, 0);
@@ -201,10 +190,9 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
         const float maxse3dist = std::max({se3_11_12, se3_11_22, se3_21_12, se3_21_22});
 
-        //diff = 2 * acos(innerProductRot);
-        const float so3dist = acos(innerProductRot);
+        const float so3dist = 2 * acos(innerProductRot);
 
-        diff = extraData->lambda * maxse3dist + so3dist;
+        diff = opts.lambdaSe3 * maxse3dist + opts.lambdaSo3 * so3dist;
     }
     else if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
         const std::tuple<int, int> commonVerticesBetweenTriangles = extraData->commonVXofFX(s1, s2);
@@ -224,11 +212,17 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         const int targetVertex2_1 = extraData->LableFY(realLableIndex2, colIdx21);
         const int targetVertex2_2 = extraData->LableFY(realLableIndex2, colIdx22);
         diff = extraData->geoDistY(targetVertex1_1, targetVertex2_1) + extraData->geoDistY(targetVertex1_2, targetVertex2_2);
-        //diff = std::log(diff);
     }
 
+    diff = opts.smoothScaleBeforeRobust * diff;
 
-    return (int) (SCALING_FACTOR * diff);
+    if (opts.robustCost) {
+        diff = std::log(diff);
+    }
+
+    diff = opts.smoothWeight * diff;
+
+    return (int) (SCALING_FACTOR * diff );
 }
 
 
