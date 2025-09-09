@@ -1,5 +1,7 @@
 target_sources(${PROJECT_NAME} 
 				PRIVATE
+					graph_cycles.cpp
+					graph_cycles.hpp
 					utils.cpp
 					utils_data.cpp
 					utils.hpp
