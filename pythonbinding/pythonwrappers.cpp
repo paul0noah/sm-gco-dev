@@ -29,4 +29,20 @@ PYBIND11_MODULE(sm_gco, handle) {
             .value("MULTIPLE_LABLE_SPACE_SE3", MULTIPLE_LABLE_SPACE_SE3)
             .value("MULTIPLE_LABLE_SPACE_GEODIST", MULTIPLE_LABLE_SPACE_GEODIST)
             .export_values();
+
+
+    py::class_<TriangleWiseOpts>(handle, "TriangleWiseOpts")
+            .def(py::init<>())
+            .def_readwrite("cost_mode", &TriangleWiseOpts::costMode)
+            .def_readwrite("smooth_scale_before_robust", &TriangleWiseOpts::smoothScaleBeforeRobust)
+            .def_readwrite("robust_cost", &TriangleWiseOpts::robustCost)
+            .def_readwrite("lambda_se_3", &TriangleWiseOpts::lambdaSe3)
+            .def_readwrite("lambda_so_3", &TriangleWiseOpts::lambdaSo3)
+            .def_readwrite("unary_weight", &TriangleWiseOpts::unaryWeight)
+            .def_readwrite("smooth_weight", &TriangleWiseOpts::smoothWeight)
+            .def_readwrite("set_initial_lables", &TriangleWiseOpts::setInitialLables)
+            .def_readwrite("lable_space_cycle_size", &TriangleWiseOpts::lableSpaceCycleSize)
+            .def_readwrite("lable_space_angle_thres", &TriangleWiseOpts::lableSpaceAngleThreshold)
+            .def_readwrite("lable_space_degenerate", &TriangleWiseOpts::lableSpaceDegnerate);
+
 }
