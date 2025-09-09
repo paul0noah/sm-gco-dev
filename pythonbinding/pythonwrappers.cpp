@@ -1,4 +1,5 @@
 #include "src/gco_shape_matching.hpp"
+#include "helper/graph_cycles.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
@@ -11,6 +12,9 @@ using namespace pybind11::literals;  // NOLINT
 
 PYBIND11_MODULE(sm_gco, handle) {
     handle.doc() = "Python Wrappers for shape matching with gco functions";
+
+
+    handle.def("get_cycle_triangles", &utils::getCycleTriangles);
     using namespace smgco;
 
     // how to wrap classes, also easy *_* (every class function has to be defined seperatly tho :/ )
