@@ -5,8 +5,11 @@
 #include <igl/unique_rows.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/barycenter.h>
-
-
+#if defined(_OPENMP)
+    #include <omp.h>
+#else
+#endif
+#include "helper/graph_cycles.hpp"
 
 
 namespace smgco {
@@ -40,6 +43,9 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
     if (costMode == SINGLE_LABLE_SPACE_L2) {
         Eigen::MatrixXf smoothCost(lableSpace.rows(), lableSpace.rows());
+        #if defined(_OPENMP)
+        #pragma omp parallel for
+        #endif
         for (int l1 = 0; l1 < lableSpace.rows(); l1++) {
             const Eigen::VectorXi targetTri1 = lableSpace.row(l1);
             for (int l2 = 0; l2 < lableSpace.rows(); l2++) {
@@ -58,8 +64,15 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         Eigen::MatrixXi AdjFX;
         igl::triangle_triangle_adjacency(FX, AdjFX);
 
+        #if defined(_OPENMP)
+        #pragma omp parallel for
+        #else
         std::vector<int> intersection; intersection.reserve(4);
+        #endif
         for (int i = 0; i < FX.rows(); i++) {
+            #if defined(_OPENMP)
+            std::vector<int> intersection; intersection.reserve(4);
+            #endif
             const int i0 = FX(i, 0), i1 = FX(i, 1), i2 = FX(i, 2);
             for (int k = 0; k < 3; k++) {
                 const int j = AdjFX(i, k);
@@ -122,6 +135,9 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
         Eigen::MatrixX<Eigen::Quaterniond> quaternoinsXtoY(FX.rows(), lableSpace.rows());
         Eigen::MatrixX<Eigen::Vector3f> tranlastionsXtoY(FX.rows(), lableSpace.rows());
+        #if defined(_OPENMP)
+        #pragma omp parallel for
+        #endif
         for (int x = 0; x < FX.rows(); x++) {
 
             for (int l = 0; l < lableSpace.rows(); l++) {
@@ -183,12 +199,23 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
     }
     if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
         Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
+        #if defined(_OPENMP)
+        #pragma omp parallel for
+        #else
         Eigen::VectorXi VYsource, FS, VYTarget, FT;
         // all vertices are source, and all are targets
         VYsource.resize(1);
         VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
         Eigen::VectorXf d;
+        #endif
         for (int i = 0; i  < VY.rows(); i++) {
+            #if defined(_OPENMP)
+            Eigen::VectorXi VYsource, FS, VYTarget, FT;
+            // all vertices are source, and all are targets
+            VYsource.resize(1);
+            VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
+            Eigen::VectorXf d;
+            #endif
             VYsource(0) = i;
             igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
             geoDistY.col(i) = d;
@@ -201,5 +228,45 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 }
 
 
+
+Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
+                                const Eigen::MatrixXi& FY,
+                                TriangleWiseOpts& opts) {
+
+    if (opts.lableSpaceDegnerate) {
+        if (opts.costMode != COST_MODE::MULTIPLE_LABLE_SPACE_L2 || opts.costMode != COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST) {
+            std::cout << "disabling degenerate lables since cost mode does not allow it" << std::endl;
+            opts.lableSpaceDegnerate = false;
+        }
+    }
+
+
+    const Eigen::MatrixXi cycleTriangles = opts.lableSpaceCycleSize == 3 ? FY : utils::getCycleTriangles(VY, FY, opts.lableSpaceCycleSize, opts.lableSpaceAngleThreshold);
+    const int numCycleTris = cycleTriangles.rows();
+    int lableSpaceSize = 3 * numCycleTris;
+
+    Eigen::MatrixXi degenerateTris;
+    if (opts.lableSpaceDegnerate) {
+        degenerateTris = utils::getDegenerateTriangles(FY);
+        lableSpaceSize += degenerateTris.rows();
+    }
+
+    Eigen::MatrixXi lableSpace(lableSpaceSize, 3);
+    if (opts.lableSpaceDegnerate) {
+        lableSpace.block(0, 0, degenerateTris.rows(), 3) = degenerateTris;
+    }
+
+    lableSpace.block(degenerateTris.rows(), 0, numCycleTris, 3) = cycleTriangles;
+
+    lableSpace.block(degenerateTris.rows() + numCycleTris, 0, numCycleTris, 3) =
+                        cycleTriangles(Eigen::all, (Eigen::Vector3i() << 1, 2, 0).finished());
+
+    lableSpace.block(degenerateTris.rows() + 2 * numCycleTris, 0, numCycleTris, 3) =
+                        cycleTriangles(Eigen::all, (Eigen::Vector3i() << 2, 0, 1).finished());
+
+
+
+    return lableSpace;
+}
 
 } // namespace smgco

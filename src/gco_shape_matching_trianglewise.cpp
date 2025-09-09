@@ -28,12 +28,10 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(const int costM
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
 
     const int numVertices = FX.rows();
-    const int numLables = 3 * FY.rows();
     // any of the three orientations of a triangle is the lable space
-    Eigen::MatrixXi lableSpace(numLables, 3);
-    lableSpace.block(0, 0, FY.rows(), 3)             = FY;
-    lableSpace.block(FY.rows(), 0, FY.rows(), 3)     = FY(Eigen::all, (Eigen::Vector3i() << 1, 2, 0).finished());
-    lableSpace.block(2 * FY.rows(), 0, FY.rows(), 3) = FY(Eigen::all, (Eigen::Vector3i() << 2, 0, 1).finished());
+    const Eigen::MatrixXi lableSpace = buildLableSpace(VY, FY, opts);
+    const int numLables = lableSpace.rows();
+    std::cout << prefix << "num lables = " << lableSpace.rows() << std::endl;
 
     Eigen::MatrixXi AdjFX;
     igl::edges(FX, AdjFX);

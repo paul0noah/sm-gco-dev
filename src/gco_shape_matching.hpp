@@ -70,6 +70,11 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
                           const Eigen::MatrixXi& lableSpace,
                           GCOTrianglewiseExtra& extraData);
 
+Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
+                                const Eigen::MatrixXi& FY,
+                                TriangleWiseOpts& opts);
+
+
 /*
 
 
