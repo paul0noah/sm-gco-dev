@@ -6,5 +6,5 @@ target_sources(${PROJECT_NAME} PRIVATE
 					graph.cpp
 					graph.h
 					LinkedBlockList.cpp
-					linkedBlockList.h
+					LinkedBlockList.h
 					maxflow.cpp)
