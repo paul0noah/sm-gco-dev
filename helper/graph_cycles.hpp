@@ -27,7 +27,7 @@ namespace std {
         std::size_t operator()(Eigen::Vector3i const& vec) const noexcept;
     };
     template<> struct equal_to<Eigen::Vector3i>{
-        constexpr bool operator()(Eigen::Vector3i& lhs, Eigen::Vector3i& rhs) const {
+        bool operator()(const Eigen::Vector3i& lhs, const Eigen::Vector3i& rhs) const {
             return lhs(0) == rhs(0) && lhs(1) == rhs(1) && lhs(2) == rhs(2);
         }
     };
