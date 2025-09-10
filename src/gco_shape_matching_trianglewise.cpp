@@ -83,13 +83,6 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
             }
         }
 
-        Eigen::MatrixXf temp0(0, 0);
-        Eigen::MatrixXi temp1(0, 0);
-        TupleMatrixInt temp2(0, 0);
-        Eigen::MatrixX<Eigen::Quaterniond> temp3(0, 0);
-        Eigen::MatrixX<Eigen::Vector3f> temp4(0, 0);
-
-
 
         for (int i = 0; i < numVertices; i++) {
             for (int l = 0; l < numLables; l++) {
