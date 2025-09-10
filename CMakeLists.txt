@@ -16,6 +16,8 @@ endif()
 include(libigl)
 include(robin-map)
 
+find_package(OpenMP)
+
 
 # switch between python bindings and executable
 if( BUILD_PYTHON_BINDINGS )
