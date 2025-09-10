@@ -36,6 +36,13 @@ Eigen::MatrixXi GCOSM::pointWise(const bool smoothGeodesic) {
         GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numLables);
         gc->setVerbosity(1);
 
+        for (int e = 0; e < EX.rows(); e++) {
+            const int srcId = EX(e, 0);
+            const int targetId = EX(e, 1);
+            const int weight = 1;
+            gc->setNeighbors(srcId, targetId, weight);
+        }
+
         // Note this could be optimised
         int* data = new int[numVertices * numLables];
         for ( int i = 0; i < numVertices; i++ ) {
@@ -74,14 +81,7 @@ Eigen::MatrixXi GCOSM::pointWise(const bool smoothGeodesic) {
 
         gc->setSmoothCost(smoothFnGCOSMPointwise, static_cast<void*>(&extraData));
 
-        
 
-        for (int e = 0; e < EX.rows(); e++) {
-            const int srcId = EX(e, 0);
-            const int targetId = EX(e, 1);
-            const int weight = 1;
-            gc->setNeighbors(srcId, targetId, weight);
-        }
 
         std::cout << prefix << "Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR << std::endl;
         gc->expansion(numIters);
