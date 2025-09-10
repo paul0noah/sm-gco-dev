@@ -45,6 +45,17 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numFakeLables);
         gc->setVerbosity(1);
 
+        for (int f = 0; f < AdjFX.rows(); f++) {
+            const int srcId = f;
+            for (int j = 0; j < 3; j++) {
+                const int targetId = AdjFX(f, j);
+                if (targetId >= 0) {
+                    const int weight = 1;
+                    gc->setNeighbors(srcId, targetId, weight);
+                }
+            }
+        }
+
         PRINT_SMGCO("Precomputing helpers...");
         GETTIME(t0);
         Eigen::MatrixXi lableToIndex(numFakeLables, 2);
@@ -109,16 +120,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         PRINT_SMGCO(" -> smooth cost done (" << DURATION_S(t2, t3) << " s)");
 
 
-        for (int f = 0; f < AdjFX.rows(); f++) {
-            const int srcId = f;
-            for (int j = 0; j < 3; j++) {
-                const int targetId = AdjFX(f, j);
-                if (targetId >= 0) {
-                    const int weight = 1;
-                    gc->setNeighbors(srcId, targetId, weight);
-                }
-            }
-        }
+
 
         if (setInitialLables) {
             PRINT_SMGCO("Setting initial lables");
