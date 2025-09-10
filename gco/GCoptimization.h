@@ -396,7 +396,7 @@ protected:
 		// The amount (cLogSitesPerBucket - cLinearSearchSize) determines the maximum 
 		// number of binary search steps taken for a cost lookup for specific (site,label).
 		//
-		static const int cLogSitesPerBucket = 9;
+		static const int cLogSitesPerBucket = 30;
 		static const int cSitesPerBucket = (1 << cLogSitesPerBucket); 
 		static const size_t    cDataCostPtrMask = ~(sizeof(SparseDataCost)-1);
 		static const ptrdiff_t cLinearSearchSize = 64/sizeof(SparseDataCost);
