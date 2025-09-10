@@ -71,26 +71,25 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
         PRINT_SMGCO("Precomputing costs...");
 
-        // Note this could be optimised
-        Eigen::MatrixXi data(numVertices, numLables);
-        for ( int i = 0; i < numVertices; i++ ) {
-            for (int l = 0; l < numLables; l++ ) {
+        Eigen::MatrixXi minLables(numVertices, 1); minLables.setConstant(0);
+        for (int i = 0; i < numVertices; i++) {
+            float minCost = std::numeric_limits<float>::infinity();
+            for (int l = 0; l < numLables; l++) {
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
                     sum += perVertexFeatureDifference(FX(i, j), lableSpace(l, j));
                 }
-                data(i, l) = (int) (SCALING_FACTOR * dataWeight * sum);
-            }
-        }
+                if (sum < minCost) {
+                    minCost = sum;
+                    minLables(i) = l;
+                }
+                const int dataCost = (int) (SCALING_FACTOR * opts.unaryWeight * sum);
 
-
-        for (int i = 0; i < numVertices; i++) {
-            for (int l = 0; l < numLables; l++) {
                 const int fakeLable = i * numLables + l;
                 const int numSites = 1;
                 GCoptimization::SparseDataCost* c = new GCoptimization::SparseDataCost[numSites];
                 c[0].site = i;
-                c[0].cost = data(i, l);
+                c[0].cost = dataCost;
                 gc->setDataCost(fakeLable, c, numSites);
             }
         }
@@ -118,8 +117,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         if (setInitialLables) {
             PRINT_SMGCO("Setting initial lables");
             for (int i = 0; i < numVertices; i++) {
-                int minIndex = -1;
-                data.row(i).minCoeff(&minIndex);
+                int minIndex = minLables(i);
                 gc->setLabel(i, minIndex + i * numLables);
             }
         }
