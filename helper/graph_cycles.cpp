@@ -18,7 +18,11 @@
 #include <stack>
 #include <igl/resolve_duplicated_faces.h>
 #include <tsl/robin_set.h>
-
+#include <igl/barycenter.h>
+#include <igl/signed_distance.h>
+#include <igl/per_face_normals.h>
+#include <igl/avg_edge_length.h>
+#include <igl/slice_mask.h>
 
 namespace utils {
 
@@ -376,7 +380,35 @@ Eigen::MatrixXi getCycleTriangles(const Eigen::MatrixXd& VX,
 
     }
     cycleTris.conservativeResize(index, 3);
-    return cycleTris;
+
+    Eigen::MatrixXd barycenters, barycentersPlusNormal, NX, C,  dist, distPlusNormal;
+    Eigen::MatrixXi I;
+    igl::barycenter(VX, cycleTris, barycenters);
+    igl::per_face_normals(VX, cycleTris, NX);
+    const double avgEdgeLength = igl::avg_edge_length(VX, FX);
+    barycentersPlusNormal = barycenters + 0.001 * NX;
+
+    igl::signed_distance(barycenters, VX, FX, igl::SIGNED_DISTANCE_TYPE_DEFAULT, dist, I, C, NX);
+    igl::signed_distance(barycentersPlusNormal, VX, FX, igl::SIGNED_DISTANCE_TYPE_DEFAULT, distPlusNormal, I, C, NX);
+
+
+    Eigen::MatrixX<bool> doNotRemove(cycleTris.rows(), 1);
+    doNotRemove.setConstant(true);
+    for (int i = 0; i < cycleTris.rows(); i++) {
+        if (dist(i) > distPlusNormal(i)) {
+            // flip the normal of tri
+            cycleTri << cycleTris(i, 0), cycleTris(i, 2), cycleTris(i, 1);
+            if (uniqueCycleTris.count(cycleTri) >= 1) {
+                doNotRemove(i) = false;
+            }
+            else {
+                uniqueCycleTris.insert(cycleTri);
+                cycleTris.row(i) = cycleTri;
+            }
+        }
+    }
+
+    return igl::slice_mask(cycleTris, doNotRemove, 1); // lol matlab dimension here
 }
 
 
