@@ -234,7 +234,7 @@ Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
                                 TriangleWiseOpts& opts) {
 
     if (opts.lableSpaceDegnerate) {
-        if (opts.costMode != COST_MODE::MULTIPLE_LABLE_SPACE_L2 || opts.costMode != COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST) {
+        if (!(opts.costMode == COST_MODE::MULTIPLE_LABLE_SPACE_L2 || opts.costMode == COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST)) {
             std::cout << "disabling degenerate lables since cost mode does not allow it" << std::endl;
             opts.lableSpaceDegnerate = false;
         }
