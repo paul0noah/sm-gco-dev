@@ -174,6 +174,22 @@ GCoptimization::SiteID GCoptimization::queryActiveSitesExpansion<GCoptimization:
 }
 
 //-------------------------------------------------------------------
+#ifdef CUSTOM_DataCostFnSparse
+template <>
+void GCoptimization::setupDataCostsExpansion<GCoptimization::DataCostFnSparse>(SiteID size,LabelID alpha_label,EnergyT *e,SiteID *activeSites)
+{
+    DataCostFnSparse* dc = (DataCostFnSparse*)m_datacostFn;
+    DataCostFnSparse::iterator dciter = dc->begin(alpha_label);
+    //for ( SiteID i = 0; i < size; ++i )
+    //{
+    const SiteID i = 0;
+    SiteID site = activeSites[i];
+        //while ( dciter.site() != site )
+        //    ++dciter;
+    addterm1_checked(e,i,dciter.cost(),m_labelingDataCosts[site]);
+    //}
+}
+#else
 
 template <>
 void GCoptimization::setupDataCostsExpansion<GCoptimization::DataCostFnSparse>(SiteID size,LabelID alpha_label,EnergyT *e,SiteID *activeSites)
@@ -188,6 +204,7 @@ void GCoptimization::setupDataCostsExpansion<GCoptimization::DataCostFnSparse>(S
 		addterm1_checked(e,i,dciter.cost(),m_labelingDataCosts[site]);
 	}
 }
+#endif
 
 //-------------------------------------------------------------------
 
@@ -444,6 +461,11 @@ template <typename DataCostT>
 void GCoptimization::updateLabelingDataCosts()
 {
 	DataCostT* dc = (DataCostT*)m_datacostFn;
+    #if GCO_PARALLEL_WHERE_POSSIBLE
+    #if defined(_OPENMP)
+    #pragma omp parallel for
+    #endif
+    #endif
 	for (int i = 0; i < m_num_sites; ++i)
 		m_labelingDataCosts[i] = dc->compute(i,m_labeling[i]);
 }
@@ -1203,6 +1225,84 @@ void GCoptimization::updateLabelingInfo(bool updateCounts, bool updateActive, bo
 //-------------------------------------------------------------------
 // Sets up the binary expansion energy, optimizes it, and updates the current labeling.
 //
+#ifdef CUSTOM_DataCostFnSparse
+bool GCoptimization::alpha_expansion(LabelID alpha_label)
+{
+    if (alpha_label < 0)
+        return false; // label was disabled due to setLabelOrder on subset of labels
+
+    finalizeNeighbors();
+    gcoclock_t ticks0 = gcoclock();
+
+    if ( m_stepsThisCycleTotal == 0 )
+        m_labelingInfoDirty = true; // if not inside expansion(), assume data cost function could have changed since last expansion
+    updateLabelingInfo();
+
+    // Determine list of active sites for this expansion move
+    SiteID size = 0;
+
+    SiteID activeSite;
+    EnergyType afterExpansionEnergy = 0;
+    try
+    {
+
+        // Get list of active sites based on alpha and current labeling
+        if ( m_queryActiveSitesExpansion )
+            size = (this->*m_queryActiveSitesExpansion)(alpha_label, &activeSite);
+        if ( size == 0 )  // Nothing to do
+        {
+            //delete [] activeSites;
+            printStatus2(alpha_label,-1,size,ticks0);
+            return false;
+        }
+
+        // Initialise reverse-lookup so that non-active neighbours can be identified
+        // while constructing the graph
+        //for ( SiteID i = 0; i < size; i++ )
+        m_lookupSiteVar[activeSite] = 0;
+        // Create binary variables for each remaining site, add the data costs,
+        // and compute the smooth costs between variables.
+        //gcoclock_t ticks__1 = gcoclock();
+        //EnergyT e(size + m_labelcostCount, // poor guess at number of pairwise terms needed :(
+        //         m_numNeighborsTotal + (m_labelcostCount ? size + m_labelcostCount : 0),
+        //         handleError);
+        EnergyT e(size, m_numNeighborsTotal, handleError);
+
+        e.add_variable(size);
+        m_beforeExpansionEnergy = 0;
+
+        if ( m_setupDataCostsExpansion   ) (this->*m_setupDataCostsExpansion  )(size,alpha_label,&e, &activeSite);
+
+
+        if ( m_setupSmoothCostsExpansion ) (this->*m_setupSmoothCostsExpansion)(size,alpha_label,&e, &activeSite);
+
+
+
+        EnergyType alphaCorrection = setupLabelCostsExpansion(size,alpha_label,&e, &activeSite);
+        //gcoclock_t ticks__2 = gcoclock();
+        //const int microsec = (int)(1000000*(ticks__2 - ticks__1) / GCO_CLOCKS_PER_SEC);
+        //printf("%i\n", microsec);
+        //checkInterrupt();
+        afterExpansionEnergy = e.minimize() + alphaCorrection;
+        //checkInterrupt();
+
+        if ( afterExpansionEnergy < m_beforeExpansionEnergy )
+            (this->*m_applyNewLabeling)(&e, &activeSite,size,alpha_label);
+
+        //for ( SiteID i = 0; i < size; i++ )
+        m_lookupSiteVar[activeSite] = -1; // restore m_lookupSite to all -1s
+
+        printStatus2(alpha_label,-1,size,ticks0);
+    }
+    catch (...)
+    {
+        //delete [] activeSites;
+        throw;
+    }
+    //delete [] activeSites;
+    return afterExpansionEnergy < m_beforeExpansionEnergy;
+}
+#else
 bool GCoptimization::alpha_expansion(LabelID alpha_label)
 {
 	if (alpha_label < 0)
@@ -1217,6 +1317,7 @@ bool GCoptimization::alpha_expansion(LabelID alpha_label)
 
 	// Determine list of active sites for this expansion move
 	SiteID size = 0;
+
 	SiteID *activeSites = new SiteID[m_num_sites];
 	EnergyType afterExpansionEnergy = 0;
 	try 
@@ -1266,6 +1367,7 @@ bool GCoptimization::alpha_expansion(LabelID alpha_label)
 	delete [] activeSites;
 	return afterExpansionEnergy < m_beforeExpansionEnergy;
 }
+#endif
 
 //-------------------------------------------------------------------
 
@@ -1751,7 +1853,15 @@ void GCoptimization::printStatus2(int alpha, int beta, int numVars, gcoclock_t t
 // DataCostFnSparse methods
 //-------------------------------------------------------------------
 
-
+#ifdef CUSTOM_DataCostFnSparse
+GCoptimization::DataCostFnSparse::DataCostFnSparse(SiteID num_sites, LabelID num_labels)
+: m_num_sites(num_sites)
+, m_num_labels(num_labels)
+, m_buckets_per_label(1)
+, m_buckets(0)
+{
+}
+#else
 GCoptimization::DataCostFnSparse::DataCostFnSparse(SiteID num_sites, LabelID num_labels)
 : m_num_sites(num_sites)
 , m_num_labels(num_labels)
@@ -1759,6 +1869,7 @@ GCoptimization::DataCostFnSparse::DataCostFnSparse(SiteID num_sites, LabelID num
 , m_buckets(0)
 {
 }
+#endif
 
 GCoptimization::DataCostFnSparse::DataCostFnSparse(const DataCostFnSparse& src)
 : m_num_sites(src.m_num_sites)
@@ -1781,6 +1892,11 @@ GCoptimization::DataCostFnSparse::~DataCostFnSparse()
 
 void GCoptimization::DataCostFnSparse::set(LabelID l, const SparseDataCost* costs, SiteID count)
 {
+#ifdef CUSTOM_DataCostFnSparse
+    if (count > 1) {
+        printf("CUSTOM_DataCostFnSparse not build for count > 0\n");
+    }
+#endif
 	// Create the bucket if necessary, and copy all the costs
 	//
 	if (!m_buckets) {
@@ -1851,6 +1967,36 @@ GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::search(DataCost
 	return GCO_MAX_ENERGYTERM; // the site belongs to this bucket but with no cost specified
 }
 
+
+#ifdef CUSTOM_DataCostFnSparse
+OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::compute(SiteID s, LabelID l)
+{
+    DataCostBucket& b = m_buckets[l];
+    const GCoptimization::EnergyTermType mycost = b.begin->cost;
+    return mycost;
+
+    if (b.begin == b.end)
+        return GCO_MAX_ENERGYTERM;
+    if (b.predict < b.end) {
+        // Check for correct prediction
+        if (b.predict->site == s) {
+            const GCoptimization::EnergyTermType theircost = (b.predict++)->cost;
+            printf("cost %i, %i\n", mycost, theircost);
+            return theircost; // predict++ for next time
+        }
+
+        // If the requested site is missing from the site ids near 'predict'
+        // then we know it doesn't exist in the bucket, so return INF
+        if (b.predict->site > s && b.predict > b.begin && (b.predict-1)->site < s)
+            return GCO_MAX_ENERGYTERM;
+    }
+    if ( (size_t)b.end - (size_t)b.begin == cSitesPerBucket*sizeof(SparseDataCost) )
+        return b.begin[s-b.begin->site].cost; // special case: this particular bucket is actually dense!
+
+    return search(b,s);
+}
+
+#else
 OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::compute(SiteID s, LabelID l)
 {
 	DataCostBucket& b = m_buckets[l*m_buckets_per_label + (s >> cLogSitesPerBucket)];
@@ -1871,7 +2017,21 @@ OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::com
 
 	return search(b,s);
 }
+#endif
 
+#ifdef CUSTOM_DataCostFnSparse
+GCoptimization::SiteID GCoptimization::DataCostFnSparse::queryActiveSitesExpansion(LabelID alpha_label, const LabelID* labeling, SiteID* activeSites)
+{
+    const SparseDataCost* next = m_buckets[alpha_label].begin;
+    const SparseDataCost* end  = m_buckets[alpha_label].end;
+    SiteID count = 0;
+    //for (; next < end; ++next) {
+    if ( labeling[next->site] != alpha_label )
+        activeSites[count++] = next->site;
+    //}
+    return count;
+}
+#else
 GCoptimization::SiteID GCoptimization::DataCostFnSparse::queryActiveSitesExpansion(LabelID alpha_label, const LabelID* labeling, SiteID* activeSites)
 {
 	const SparseDataCost* next = m_buckets[alpha_label*m_buckets_per_label].begin;
@@ -1883,4 +2043,4 @@ GCoptimization::SiteID GCoptimization::DataCostFnSparse::queryActiveSitesExpansi
 	}
 	return count;
 }
-
+#endif
