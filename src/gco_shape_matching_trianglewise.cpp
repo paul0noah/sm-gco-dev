@@ -36,7 +36,6 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
     PRINT_SMGCO("num lables = " << numVertices * numLables << ", num lables per site = " << numLables);
 
     Eigen::MatrixXi AdjFX;
-    igl::edges(FX, AdjFX);
     igl::triangle_triangle_adjacency(FX, AdjFX);
 
     Eigen::MatrixXi result(numVertices, 6);
