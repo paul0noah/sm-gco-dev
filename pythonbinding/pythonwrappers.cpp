@@ -47,7 +47,8 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("smooth_weight", &TriangleWiseOpts::smoothWeight)
             .def_readwrite("set_initial_lables", &TriangleWiseOpts::setInitialLables)
             .def_readwrite("lable_space_cycle_size", &TriangleWiseOpts::lableSpaceCycleSize)
-            .def_readwrite("lable_space_angle_thres", &TriangleWiseOpts::lableSpaceAngleThreshold)
-            .def_readwrite("lable_space_degenerate", &TriangleWiseOpts::lableSpaceDegnerate);
+            .def_readwrite("membrane_energy_weight", &TriangleWiseOpts::membraneFactor)
+            .def_readwrite("bending_energy_weight", &TriangleWiseOpts::bendingFactor)
+            .def_readwrite("wks_energy_weight", &TriangleWiseOpts::wksFactor);
 
 }

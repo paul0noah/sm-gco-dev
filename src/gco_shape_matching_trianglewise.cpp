@@ -5,6 +5,7 @@
 #include <igl/unique_rows.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/barycenter.h>
+#include "energy/deformationEnergy.hpp"
 #include <chrono>
 
 #define GETTIME(x) std::chrono::steady_clock::time_point x = std::chrono::steady_clock::now()
@@ -71,6 +72,12 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
         PRINT_SMGCO("Precomputing costs...");
 
+        Eigen::MatrixXd energy;
+        bool addEnergy = false;
+        if (opts.membraneFactor > 1e-8 || opts.bendingFactor > 1e-8 || opts.wksFactor > 1e-8) {
+            energy = energyWrapper(VX, FX, VY, FY, extraSmooth.LableFY, numDegenerate, opts.membraneFactor, opts.bendingFactor, opts.wksFactor);
+            addEnergy = true;
+        }
         Eigen::MatrixXi minLables(numVertices, 1); minLables.setConstant(0);
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
@@ -83,6 +90,9 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
                     minCost = sum;
                     minLables(i) = l;
                 }
+                if (addEnergy) {
+                    sum += energy(i, l);
+                }
                 const int dataCost = (int) (SCALING_FACTOR * opts.unaryWeight * sum);
 
                 const int fakeLable = i * numLables + l;
@@ -93,6 +103,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
                 gc->setDataCost(fakeLable, c, numSites);
             }
         }
+        energy.conservativeResize(0, 0);
 
 
 

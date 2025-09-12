@@ -30,6 +30,9 @@ struct TriangleWiseOpts {
     int lableSpaceCycleSize = 6;
     float lableSpaceAngleThreshold = M_PI / 2;
     bool lableSpaceDegnerate = true;
+    float membraneFactor = 0.0f;
+    float bendingFactor = 0.0f;
+    float wksFactor = 0.0f;
 };
 
 typedef struct GCOTrianglewiseExtra {
