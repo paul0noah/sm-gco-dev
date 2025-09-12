@@ -96,13 +96,12 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.p2pDeformation = p2pDeformation;
     }
     if (costMode == MULTIPLE_LABLE_SPACE_SO3 || costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3) {
-        std::cout << "TODO: take care of other lable space definitions for normals" << std::endl;
         Eigen::MatrixXd NX, NY, TriCentroidsX, TriCentroidsY;
         igl::per_face_normals(VX, FX, NX);
-        igl::per_face_normals(VY, FY, NY);
+        igl::per_face_normals(VY, lableSpace, NY);
 
         igl::barycenter(VX, FX, TriCentroidsX);
-        igl::barycenter(VY, FY, TriCentroidsY);
+        igl::barycenter(VY, lableSpace, TriCentroidsY);
 
         const bool globalTrafo = true;
         if (!globalTrafo) {
@@ -141,11 +140,10 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         for (int x = 0; x < FX.rows(); x++) {
 
             for (int l = 0; l < lableSpace.rows(); l++) {
-                const int fy = l % FY.rows();
                 const Eigen::Matrix3d pointsX = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsX.row(x), EX0.row(x), EX1.row(x)).finished() :
                 (Eigen::Matrix3d() << NX.row(x), EX0.row(x), EX1.row(x)).finished() ;
-                const Eigen::Matrix3d pointsY = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsY.row(fy), EY0.row(l), EY1.row(l)).finished() :
-                (Eigen::Matrix3d() << NY.row(fy), EY0.row(l), EY1.row(l)).finished() ;
+                const Eigen::Matrix3d pointsY = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsY.row(l), EY0.row(l), EY1.row(l)).finished() :
+                (Eigen::Matrix3d() << NY.row(l), EY0.row(l), EY1.row(l)).finished() ;
 
                 /*std::cout << pointsY.row(0).dot(pointsY.row(1)) << std::endl;
                  std::cout << pointsY.row(0).dot(pointsY.row(2)) << std::endl;
