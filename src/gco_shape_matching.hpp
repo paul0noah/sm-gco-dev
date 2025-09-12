@@ -1,10 +1,10 @@
+#ifndef GCO_SHAPE_MATCHING
+#define GCO_SHAPE_MATCHING
 #include <Eigen/Dense>
 #include <iostream>
 #include <string>
 #include <gco/GCoptimization.h>
 #include "helper/shape.hpp"
-#ifndef GCO_SHAPE_MATCHING
-#define GCO_SHAPE_MATCHING
 
 #define SCALING_FACTOR 10000.0f
 typedef Eigen::MatrixX<std::tuple<int, int>> TupleMatrixInt;
