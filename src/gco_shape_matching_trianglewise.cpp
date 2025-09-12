@@ -23,16 +23,17 @@ namespace smgco {
 
  */
 std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
+    GCOTrianglewiseExtra extraSmooth;
     const bool setInitialLables = opts.setInitialLables;
 
     const COST_MODE costMode = opts.costMode;
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
 
     const int numVertices = FX.rows();
-    // any of the three orientations of a triangle is the lable space
-    const Eigen::MatrixXi lableSpace = buildLableSpace(VY, FY, opts);
-    const int numLables = lableSpace.rows();
-    std::cout << prefix << "num lables = " << lableSpace.rows() << std::endl;
+    int numDegenerate = 0;
+    extraSmooth.LableFY = buildLableSpace(VY, FY, numDegenerate, opts);
+    const int numLables = extraSmooth.LableFY.rows();
+    PRINT_SMGCO("num lables = " << numVertices * numLables << ", num lables per site = " << numLables);
 
     Eigen::MatrixXi AdjFX;
     igl::edges(FX, AdjFX);
@@ -59,11 +60,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
 
         PRINT_SMGCO("Precomputing helpers...");
         GETTIME(t0);
-        Eigen::MatrixXi lableToIndex(numFakeLables, 2);
+        extraSmooth.lableToIndex = Eigen::MatrixXi(numFakeLables, 2);
         for (int lf = 0; lf < numFakeLables; lf++) {
             const int rowIndex = lf / numLables;
             const int colIndex = lf - rowIndex * numLables;
-            lableToIndex.row(lf) << rowIndex, colIndex ;
+            extraSmooth.lableToIndex.row(lf) << rowIndex, colIndex ;
         }
 
 
@@ -84,7 +85,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
             for (int l = 0; l < numLables; l++) {
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
-                    sum += perVertexFeatureDifference(FX(i, j), lableSpace(l, j));
+                    sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
                 }
                 if (sum < minCost) {
                     minCost = sum;
@@ -111,13 +112,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         PRINT_SMGCO(" -> data cost done (" << DURATION_S(t1, t2) << " s)");
 
 
-        GCOTrianglewiseExtra extraSmooth;
         extraSmooth.costMode = costMode;
         extraSmooth.numLables = numLables;
-        extraSmooth.lableToIndex = lableToIndex;
         extraSmooth.VX = VX.cast<float>();
-        extraSmooth.lambda = 10; //54 / 27 * M_PI;
-        precomputeSmoothCost(VX, FX, VY, FY, lableSpace, extraSmooth);
+        extraSmooth.FX = FX;
+        precomputeSmoothCost(VX, FX, VY, FY, extraSmooth.LableFY, extraSmooth);
         gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraSmooth));
         GETTIME(t3);
         PRINT_SMGCO(" -> smooth cost done (" << DURATION_S(t2, t3) << " s)");
@@ -148,7 +147,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
                 continue;
             }
             for (int j = 0; j < 3; j++) {
-                result(i, j+3) = lableSpace(lable, j);
+                result(i, j+3) = extraSmooth.LableFY(lable, j);
             }
         }
 
