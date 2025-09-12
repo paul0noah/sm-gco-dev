@@ -222,15 +222,13 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         }
         extraData.geoDistY = geoDistY;
     }
-
-    extraData.FX = FX;
-    extraData.LableFY = lableSpace;
 }
 
 
 
 Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
                                 const Eigen::MatrixXi& FY,
+                                int& numDegenerate,
                                 TriangleWiseOpts& opts) {
 
     if (opts.lableSpaceDegnerate) {
@@ -246,9 +244,11 @@ Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
     int lableSpaceSize = 3 * numCycleTris;
 
     Eigen::MatrixXi degenerateTris;
+    numDegenerate = 0;
     if (opts.lableSpaceDegnerate) {
         degenerateTris = utils::getDegenerateTriangles(FY);
         lableSpaceSize += degenerateTris.rows();
+        numDegenerate = degenerateTris.rows();
     }
 
     Eigen::MatrixXi lableSpace(lableSpaceSize, 3);

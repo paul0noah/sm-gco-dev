@@ -91,6 +91,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
 Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
                                 const Eigen::MatrixXi& FY,
+                                int& numDegenerate,
                                 TriangleWiseOpts& opts);
 
 
