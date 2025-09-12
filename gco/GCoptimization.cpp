@@ -1910,6 +1910,10 @@ void GCoptimization::DataCostFnSparse::set(LabelID l, const SparseDataCost* cost
 	SparseDataCost* next = new SparseDataCost[count];
 	memcpy(next,costs,count*sizeof(SparseDataCost));
 
+#ifdef CUSTOM_DataCostFnSparse
+    const int i = 0;
+    b[i].begin = next;
+#else
 	//
 	// Scan the list of costs and remember pointers to delimit the 'buckets', i.e. where 
 	// ranges of SiteIDs lie along the array. Buckets can be empty (begin == end).
@@ -1929,8 +1933,11 @@ void GCoptimization::DataCostFnSparse::set(LabelID l, const SparseDataCost* cost
 		}
 		b[i].end = next;
 	}
+#endif
 }
 
+#ifdef CUSTOM_DataCostFnSparse
+#else
 GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::search(DataCostBucket& b, SiteID s)
 {
 	// Perform binary search for requested SiteID
@@ -1966,7 +1973,7 @@ GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::search(DataCost
 
 	return GCO_MAX_ENERGYTERM; // the site belongs to this bucket but with no cost specified
 }
-
+#endif
 
 #ifdef CUSTOM_DataCostFnSparse
 OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::compute(SiteID s, LabelID l)
@@ -1974,26 +1981,6 @@ OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::com
     DataCostBucket& b = m_buckets[l];
     const GCoptimization::EnergyTermType mycost = b.begin->cost;
     return mycost;
-
-    if (b.begin == b.end)
-        return GCO_MAX_ENERGYTERM;
-    if (b.predict < b.end) {
-        // Check for correct prediction
-        if (b.predict->site == s) {
-            const GCoptimization::EnergyTermType theircost = (b.predict++)->cost;
-            printf("cost %i, %i\n", mycost, theircost);
-            return theircost; // predict++ for next time
-        }
-
-        // If the requested site is missing from the site ids near 'predict'
-        // then we know it doesn't exist in the bucket, so return INF
-        if (b.predict->site > s && b.predict > b.begin && (b.predict-1)->site < s)
-            return GCO_MAX_ENERGYTERM;
-    }
-    if ( (size_t)b.end - (size_t)b.begin == cSitesPerBucket*sizeof(SparseDataCost) )
-        return b.begin[s-b.begin->site].cost; // special case: this particular bucket is actually dense!
-
-    return search(b,s);
 }
 
 #else
@@ -2023,7 +2010,7 @@ OLGA_INLINE GCoptimization::EnergyTermType GCoptimization::DataCostFnSparse::com
 GCoptimization::SiteID GCoptimization::DataCostFnSparse::queryActiveSitesExpansion(LabelID alpha_label, const LabelID* labeling, SiteID* activeSites)
 {
     const SparseDataCost* next = m_buckets[alpha_label].begin;
-    const SparseDataCost* end  = m_buckets[alpha_label].end;
+    //const SparseDataCost* end  = m_buckets[alpha_label].end;
     SiteID count = 0;
     //for (; next < end; ++next) {
     if ( labeling[next->site] != alpha_label )

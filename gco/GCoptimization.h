@@ -411,11 +411,17 @@ protected:
 		static const size_t    cDataCostPtrMask = ~(sizeof(SparseDataCost)-1);
 		static const ptrdiff_t cLinearSearchSize = 64/sizeof(SparseDataCost);
 
+#ifdef CUSTOM_DataCostFnSparse
 		struct DataCostBucket {
 			const SparseDataCost* begin;
-			const SparseDataCost* end;     // one-past-the-last item in the range
-			const SparseDataCost* predict; // predicts the next cost to be needed
 		};
+#else
+        struct DataCostBucket {
+            const SparseDataCost* begin;
+            const SparseDataCost* end;     // one-past-the-last item in the range
+            const SparseDataCost* predict; // predicts the next cost to be needed
+        };
+#endif
 
 	public:
 		DataCostFnSparse(SiteID num_sites, LabelID num_labels);
@@ -442,7 +448,11 @@ protected:
 		};
 
 		OLGA_INLINE iterator begin(LabelID label) const { return m_buckets[label*m_buckets_per_label].begin; }
-		OLGA_INLINE iterator end(LabelID label)   const { return m_buckets[label*m_buckets_per_label + m_buckets_per_label-1].end; }
+#ifdef CUSTOM_DataCostFnSparse
+		OLGA_INLINE iterator end(LabelID label)   const { return m_buckets[label*m_buckets_per_label + m_buckets_per_label-1].begin; }
+#else
+        OLGA_INLINE iterator end(LabelID label)   const { return m_buckets[label*m_buckets_per_label + m_buckets_per_label-1].end; }
+#endif
 
 	private:
 		EnergyTermType search(DataCostBucket& b, SiteID s);
