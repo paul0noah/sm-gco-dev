@@ -101,6 +101,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
                 c[0].site = i;
                 c[0].cost = dataCost;
                 gc->setDataCost(fakeLable, c, numSites);
+                delete[] c;
             }
         }
         energy.conservativeResize(0, 0);
