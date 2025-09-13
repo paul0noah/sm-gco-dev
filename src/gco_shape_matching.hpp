@@ -35,6 +35,7 @@ struct TriangleWiseOpts {
     float membraneFactor = 0.0f;
     float bendingFactor = 0.0f;
     float wksFactor = 0.0f;
+    bool glueSolution = true;
 };
 
 typedef struct GCOTrianglewiseExtra {
@@ -77,8 +78,8 @@ class GCOSM {
     void printName();
 
     Eigen::MatrixXi pointWise(const bool smoothGeodesic=false);
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
+    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
+    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
 
     void setDataWeight(const float newDataWeight);
     void setMaxIter(const int newMaxIter);

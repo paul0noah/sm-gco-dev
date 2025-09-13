@@ -22,7 +22,7 @@ namespace smgco {
 
 
  */
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
+std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
     GCOTrianglewiseExtra extraSmooth;
     const bool setInitialLables = opts.setInitialLables;
 
@@ -188,7 +188,25 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
     Eigen::MatrixXi p2p_unique, IA, IC;
     igl::unique_rows(p2p, p2p_unique, IA, IC);
 
-    return std::make_tuple(p2p_unique, result);
+
+    Eigen::MatrixXi gluedSolution, gluedp2p;
+    if (opts.glueSolution) {
+        gluedSolution = Eigen::MatrixXi(result.rows(), 6);
+        gluedp2p = Eigen::MatrixXi(VX.rows(), 2);
+        const Eigen::MatrixXi gluedMatches = glueResult(result.block(0, 3, result.rows(), 3), VX, FX, VY, FY);
+        for (int i = 0; i < VX.rows(); i++) {
+            gluedp2p.row(i) << i, gluedMatches(i);
+        }
+        for (int i = 0; i < result.rows(); i++) {
+            for (int j = 0; j < 3; j++) {
+                const int indexX = result(i, j);
+                const int bestIndexY = gluedMatches(indexX);
+                gluedSolution(i, j) = indexX;
+                gluedSolution(i, j+3) = bestIndexY;
+            }
+        }
+    }
+    return std::make_tuple(p2p_unique, result, gluedp2p, gluedSolution);
 }
 
 

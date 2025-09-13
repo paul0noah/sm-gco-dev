@@ -51,6 +51,8 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("lable_space_angle_thres", &TriangleWiseOpts::lableSpaceAngleThreshold)
             .def_readwrite("membrane_energy_weight", &TriangleWiseOpts::membraneFactor)
             .def_readwrite("bending_energy_weight", &TriangleWiseOpts::bendingFactor)
-            .def_readwrite("wks_energy_weight", &TriangleWiseOpts::wksFactor);
+            .def_readwrite("wks_energy_weight", &TriangleWiseOpts::wksFactor)
+            .def_readwrite("glue_solution", &TriangleWiseOpts::glueSolution);
+
 
 }
