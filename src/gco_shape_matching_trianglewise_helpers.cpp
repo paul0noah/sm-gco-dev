@@ -5,6 +5,7 @@
 #include <igl/unique_rows.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/barycenter.h>
+#include <igl/vertex_triangle_adjacency.h>
 #if defined(_OPENMP)
     #include <omp.h>
 #else
@@ -39,6 +40,59 @@ Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
         geoDistY.col(i) = d;
     }
     return geoDistY;
+}
+
+
+
+Eigen::MatrixXi glueResult(const Eigen::MatrixXi& FYresult,
+                           const Eigen::MatrixXd& VX,
+                           const Eigen::MatrixXi& FX,
+                           const Eigen::MatrixXd& VY,
+                           const Eigen::MatrixXi& FY,
+                           const Eigen::MatrixXf& geoDistY) {
+    const bool geodistGiven = geoDistY.rows() != 0;
+    const Eigen::MatrixXf geoDistMatYInternal = geodistGiven ? geoDistY : computeGeodistMatrix(VY, FY);
+    assert(FYresult.cols() == 3);
+    assert(FX.rows() == FYresult.rows());
+
+
+    std::vector<std::vector<int>> vertexTriAdjX, notNeeded;
+    igl::vertex_triangle_adjacency(VX.rows(), FX, vertexTriAdjX, notNeeded);
+
+    // find all vertices on Y to which vertices of X got matched to
+    std::vector<std::vector<int>> vertexOfXMatchedTo;
+    vertexOfXMatchedTo.reserve(VX.rows());
+    for (int i = 0; i < VX.rows(); i++) {
+        vertexOfXMatchedTo.push_back(std::vector<int>());
+        for (const auto& faceIndex : vertexTriAdjX[i]) {
+            for (int j = 0; j < 3; j++) {
+                const int triVertex = FX(faceIndex, j);
+                if (triVertex == i) {
+                    const int matchedVertex = FYresult(faceIndex, j);
+                    vertexOfXMatchedTo[i].push_back(matchedVertex);
+                }
+            }
+        }
+    }
+
+
+    // for each vertex on X, find the vertex on Y which is closest
+    // (w.r.t. geodesic distance) to all matched verticces
+    Eigen::MatrixXi bestMatches(VX.rows(), 1);
+    Eigen::VectorXf sum(VY.rows());
+    for (int i = 0; i < VX.rows(); i++) {
+        const std::vector<int> matchedVertices = vertexOfXMatchedTo[i];
+        sum.setZero();
+        for (const auto& vertexY : matchedVertices) {
+            const int vY = vertexY;
+            sum += geoDistMatYInternal.row(vertexY);
+        }
+        int minIndex;
+        sum.minCoeff(&minIndex);
+        bestMatches(i, 0) = minIndex;
+    }
+
+    return bestMatches;
 }
 
 /*

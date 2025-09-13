@@ -82,6 +82,13 @@ class GCOSM {
 };
 
 
+Eigen::MatrixXi glueResult(const Eigen::MatrixXi& result,
+                           const Eigen::MatrixXd& VX,
+                           const Eigen::MatrixXi& FX,
+                           const Eigen::MatrixXd& VY,
+                           const Eigen::MatrixXi& FY,
+                           const Eigen::MatrixXf& geoDistY=Eigen::MatrixXf(0, 0));
+
 void precomputeSmoothCost(const Eigen::MatrixXd& VX,
                           const Eigen::MatrixXi& FX,
                           const Eigen::MatrixXd& VY,
