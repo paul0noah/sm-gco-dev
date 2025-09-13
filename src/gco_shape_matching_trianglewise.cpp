@@ -208,7 +208,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             }
         }
     }
-    return std::make_tuple(optimisationTime, p2p_unique, result, gluedp2p, gluedSolution);
+    return std::make_tuple(optimisationTime, gluedp2p, gluedSolution, p2p_unique, result);
 }
 
 
