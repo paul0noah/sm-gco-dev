@@ -210,7 +210,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> G
 }
 
 
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
+std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
     TriangleWiseOpts opts;
     return triangleWise(opts);
 }
