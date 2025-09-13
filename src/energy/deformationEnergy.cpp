@@ -177,19 +177,17 @@ Eigen::MatrixXd energyWrapper(const Eigen::MatrixXd& VX,
                               const float bendingFactor,
                               const float wksFactor) {
 
-    Shape shapeX(VX.cast<float>(), FX), shapeY(VY.cast<float>(), FY);
-
 
     Eigen::MatrixXd energy(FX.rows(), lableSpace.rows());
     energy.setConstant(0);
-    Combinations combos;
-    combos.FbCombo = lableSpace;
+    Shape shapeX(VX.cast<float>(), FX), shapeY(VY.cast<float>(), FY);
 
     #if defined(_OPENMP)
     #pragma omp parallel
     #endif
     for (int f = 0; f < FX.rows(); f++) {
-        combos.FaCombo = utils::repelem(FX.row(f), lableSpace.rows(), 1);
+        const Eigen::MatrixXi FxCombo = utils::repelem(FX.row(f), lableSpace.rows(), 1);
+        Combinations combos(FxCombo, lableSpace);
 
         DeformationEnergy defEnergy(shapeX, shapeY, combos, membraneFactor, bendingFactor, wksFactor);
         Eigen::VectorXd energyVec = defEnergy.get(numDegenerate).cast<double>();

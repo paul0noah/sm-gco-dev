@@ -216,7 +216,7 @@ Eigen::MatrixXf BendingEnergy::get(Shape &shapeA, Shape &shapeB, const Eigen::Ma
     Eigen::VectorXf Ab(shapeB.getNumFaces());
 
 
-    Eigen::VectorXf Ca0, Ca1, Da0, Da1, Cb0, Cb1, Db0, Db1;
+    Eigen::MatrixXf Ca0, Ca1, Da0, Da1, Cb0, Cb1, Db0, Db1;
 
     igl::principal_curvature(shapeA.getV(), shapeA.getF(), Da0, Da1, Ca0, Ca1);
     igl::principal_curvature(shapeB.getV(), shapeB.getF(), Db0, Db1, Cb0, Cb1);

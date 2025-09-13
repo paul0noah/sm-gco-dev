@@ -13,8 +13,11 @@
 #include "src/energy/bendingEnergy.hpp"
 
 struct Combinations {
-    Eigen::MatrixXi FaCombo;
-    Eigen::MatrixXi FbCombo;
+    const Eigen::MatrixXi& FaCombo;
+    const Eigen::MatrixXi& FbCombo;
+    Combinations(const Eigen::MatrixXi& FaCombo, const Eigen::MatrixXi& FbCombo) :
+        FaCombo(FaCombo), FbCombo(FbCombo) {
+    }
 };
 
 
