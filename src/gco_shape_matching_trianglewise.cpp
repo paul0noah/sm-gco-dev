@@ -86,6 +86,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> G
                 for (int j = 0; j < 3; j++) {
                     sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
                 }
+                sum *= opts.featureFactor;
                 if (sum < minCost) {
                     minCost = sum;
                     minLables(i) = l;

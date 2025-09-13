@@ -35,6 +35,7 @@ struct TriangleWiseOpts {
     float membraneFactor = 0.0f;
     float bendingFactor = 0.0f;
     float wksFactor = 0.0f;
+    float featureFactor = 1.0f;
     bool glueSolution = true;
 };
 

@@ -52,6 +52,7 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("membrane_energy_weight", &TriangleWiseOpts::membraneFactor)
             .def_readwrite("bending_energy_weight", &TriangleWiseOpts::bendingFactor)
             .def_readwrite("wks_energy_weight", &TriangleWiseOpts::wksFactor)
+            .def_readwrite("feature_weight", &TriangleWiseOpts::featureFactor)
             .def_readwrite("glue_solution", &TriangleWiseOpts::glueSolution);
 
 
