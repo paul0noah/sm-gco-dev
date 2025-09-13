@@ -265,6 +265,15 @@ namespace std {
             return (lhs.idx0 == rhs.idx0) && (lhs.idx1 == rhs.idx1);
         }
     };
+
+    template<> struct hash<std::tuple<int, int>> {
+        std::size_t operator()(std::tuple<int, int> const& key) const noexcept;
+    };
+    template<> struct equal_to<std::tuple<int, int>>{
+        constexpr bool operator()(const std::tuple<int, int> &lhs, const std::tuple<int, int> &rhs) const {
+            return (std::get<0>(lhs) == std::get<0>(rhs)) && (std::get<1>(lhs) == std::get<1>(rhs));
+        }
+    };
 }
 
 #endif /* utils_hpp */

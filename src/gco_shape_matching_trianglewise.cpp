@@ -116,6 +116,12 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
         extraSmooth.numLables = numLables;
         extraSmooth.VX = VX.cast<float>();
         extraSmooth.FX = FX;
+        if (USE_CACHING) {
+            const int cacheSizeGuess = 5 * numLables * AdjFX.rows();
+            PRINT_SMGCO("Cache size guess " << cacheSizeGuess);
+            extraSmooth.cache.reserve(cacheSizeGuess);
+        }
+
         precomputeSmoothCost(VX, FX, VY, FY, extraSmooth.LableFY, extraSmooth);
         gc->setSmoothCost(smoothFnGCOSMTrianglewise, static_cast<void*>(&extraSmooth));
         GETTIME(t3);
@@ -149,6 +155,18 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpt
             for (int j = 0; j < 3; j++) {
                 result(i, j+3) = extraSmooth.LableFY(lable, j);
             }
+        }
+
+        if (USE_CACHING) {
+            PRINT_SMGCO("Cache filled " << extraSmooth.cache.size());
+            size_t collisions = 0;
+            for (size_t i = 0; i < extraSmooth.cache.bucket_count(); ++i) {
+                auto bucket_size = extraSmooth.cache.bucket_size(i);
+                if (bucket_size > 1) {
+                    collisions += bucket_size - 1; // each extra element in a bucket is a collision
+                }
+            }
+            PRINT_SMGCO("Collisions: " << collisions);
         }
 
 

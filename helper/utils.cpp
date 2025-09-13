@@ -301,4 +301,21 @@ namespace std {
         int k2 = edg.idx1;
         return (k1 + k2 ) * (k1 + k2 + 1) / 2 + k2;
     }
+
+    std::size_t hash<std::tuple<int, int>>::operator()(std::tuple<int, int> const& key) const noexcept {
+        //size_t idx0hash = std::hash<int>()(edg.idx0);
+        //size_t idx1hash = std::hash<int>()(edg.idx1) << 1;
+        //return idx0hash ^ idx1hash;
+        //const GCoptimization::LabelID k0 = std::get<0>(key);
+        //const GCoptimization::LabelID k1 = std::get<1>(key);
+
+        //return 65536 * k1 + k0;
+
+
+        auto [a,b] = key;
+        return std::min(a, b) + std::max(a, b);
+
+        uint64_t s = static_cast<uint64_t>(a) + static_cast<uint64_t>(b);
+        return (s * (s + 1)) / 2 + b; // Cantor pairing
+    }
 }

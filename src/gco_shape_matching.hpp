@@ -5,6 +5,8 @@
 #include <string>
 #include <gco/GCoptimization.h>
 #include "helper/shape.hpp"
+#include <unordered_map>
+#define USE_CACHING false
 
 #define SCALING_FACTOR 10000.0f
 typedef Eigen::MatrixX<std::tuple<int, int>> TupleMatrixInt;
@@ -50,6 +52,7 @@ typedef struct GCOTrianglewiseExtra {
     Eigen::MatrixX<Eigen::Vector3f> translationsXtoY;
     Eigen::MatrixXi lableToIndex;
     Eigen::MatrixXf geoDistY;
+    std::unordered_map<std::tuple<GCoptimization::LabelID, GCoptimization::LabelID>, int> cache;
 } GCOTrianglewiseExtra;
 
 
@@ -117,6 +120,15 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
                                                          GCoptimization::LabelID l2,
                                                          void* extraDataVoid) {
     GCOTrianglewiseExtra* extraData = static_cast<GCOTrianglewiseExtra*>(extraDataVoid);
+    if (USE_CACHING) {
+        const auto& it = extraData->cache.find(std::make_tuple(std::min(l1, l2), std::max(l1, l2)));
+        if (it != extraData->cache.end()) {
+            return it->second;
+            //return it.value();
+        }
+    }
+
+
     const TriangleWiseOpts opts = extraData->opts;
     const COST_MODE costMode = extraData->costMode;
 
@@ -233,7 +245,13 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
     diff = opts.smoothWeight * diff;
 
-    return (int) (SCALING_FACTOR * diff );
+
+    const int output = (int) (SCALING_FACTOR * diff );
+    if (USE_CACHING) {
+        extraData->cache.insert({std::make_tuple(std::min(l1, l2), std::max(l1, l2)), output});
+    }
+
+    return output;
 }
 
 
