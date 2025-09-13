@@ -14,6 +14,33 @@
 
 namespace smgco {
 
+Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
+                                     const Eigen::MatrixXi& FY) {
+    Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
+    #if defined(_OPENMP)
+    #pragma omp parallel for
+    #else
+    Eigen::VectorXi VYsource, FS, VYTarget, FT;
+    // all vertices are source, and all are targets
+    VYsource.resize(1);
+    VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
+    Eigen::VectorXf d;
+    #endif
+    for (int i = 0; i < (int)VY.rows(); i++) {
+        #if defined(_OPENMP)
+        Eigen::VectorXi VYsource, FS, VYTarget, FT;
+        // all vertices are source, and all are targets
+        VYsource.resize(1);
+        VYTarget.setLinSpaced(VY.rows(), 0, (int)VY.rows());
+        Eigen::VectorXf d;
+        #endif
+        VYsource(0) = i;
+        igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
+        geoDistY.col(i) = d;
+    }
+    return geoDistY;
+}
+
 /*
 
 
@@ -196,29 +223,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
     }
     if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
-        Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
-        #if defined(_OPENMP)
-        #pragma omp parallel for
-        #else
-        Eigen::VectorXi VYsource, FS, VYTarget, FT;
-        // all vertices are source, and all are targets
-        VYsource.resize(1);
-        VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
-        Eigen::VectorXf d;
-        #endif
-        for (int i = 0; i  < VY.rows(); i++) {
-            #if defined(_OPENMP)
-            Eigen::VectorXi VYsource, FS, VYTarget, FT;
-            // all vertices are source, and all are targets
-            VYsource.resize(1);
-            VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
-            Eigen::VectorXf d;
-            #endif
-            VYsource(0) = i;
-            igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
-            geoDistY.col(i) = d;
-        }
-        extraData.geoDistY = geoDistY;
+        extraData.geoDistY = computeGeodistMatrix(VY, FY);
     }
 }
 
