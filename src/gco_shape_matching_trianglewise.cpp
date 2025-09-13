@@ -22,7 +22,7 @@ namespace smgco {
 
 
  */
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
+std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
     GCOTrianglewiseExtra extraSmooth;
     const bool setInitialLables = opts.setInitialLables;
 
@@ -41,6 +41,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> G
     Eigen::MatrixXi result(numVertices, 6);
     result.block(0, 0, FX.rows(), 3) = FX;
 
+    float optimisationTime = 0.0f;
     try{
         const int numFakeLables = FX.rows() * numLables;
         GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numFakeLables);
@@ -145,7 +146,7 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> G
         GETTIME(t5);
         PRINT_SMGCO("After optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         PRINT_SMGCO("Optimisation took: " << DURATION_S(t4, t5) << " s");
-
+        optimisationTime = DURATION_MS(t4, t5) / 1000.0f;
 
         for ( int  i = 0; i < numVertices; i++ ) {
             const int lable = gc->whatLabel(i) - i * numLables;
@@ -207,11 +208,11 @@ std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> G
             }
         }
     }
-    return std::make_tuple(p2p_unique, result, gluedp2p, gluedSolution);
+    return std::make_tuple(optimisationTime, p2p_unique, result, gluedp2p, gluedSolution);
 }
 
 
-std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
+std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise() {
     TriangleWiseOpts opts;
     return triangleWise(opts);
 }

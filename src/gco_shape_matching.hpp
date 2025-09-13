@@ -79,8 +79,8 @@ class GCOSM {
     void printName();
 
     Eigen::MatrixXi pointWise(const bool smoothGeodesic=false);
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
-    std::tuple<Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
+    std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
+    std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise();
 
     void setDataWeight(const float newDataWeight);
     void setMaxIter(const int newMaxIter);
