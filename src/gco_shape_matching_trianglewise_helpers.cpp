@@ -156,7 +156,12 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         }
         extraData.p2pDeformation = smoothCost;
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3 || costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
+    if (costMode == MULTIPLE_LABLE_SPACE_L2 ||
+        costMode == MULTIPLE_LABLE_SPACE_SE3 ||
+        costMode == MULTIPLE_LABLE_SPACE_GEODIST ||
+        costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX ||
+        costMode == MULTIPLE_LABLE_SPACE_L2DIST ||
+        costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
         TupleMatrixInt commonVertices(FX.rows(), FX.rows());
         Eigen::MatrixXi AdjFX;
         igl::triangle_triangle_adjacency(FX, AdjFX);
