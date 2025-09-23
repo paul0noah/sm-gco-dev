@@ -42,6 +42,22 @@ Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
     return geoDistY;
 }
 
+Eigen::MatrixXf computeL2DistMatrix(const Eigen::MatrixXd& VY,
+                                    const Eigen::MatrixXi& FY) {
+    Eigen::MatrixXf l2Dist(VY.rows(), VY.rows());
+    #if defined(_OPENMP)
+    #pragma omp parallel for
+    #endif
+    for (int i = 0; i < (int)VY.rows(); i++) {
+        const Eigen::Vector3d vi = VY.row(i);
+        for (int j = 0; j < (int) VY.rows(); j++) {
+            const Eigen::Vector3d vj = VY.row(j);
+            l2Dist(i, j) = (vi - vj).norm();
+        }
+    }
+    return l2Dist;
+}
+
 
 
 Eigen::MatrixXi glueResult(const Eigen::MatrixXi& FYresult,
@@ -276,8 +292,11 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.translationsXtoY = tranlastionsXtoY;
 
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
+    if (costMode == MULTIPLE_LABLE_SPACE_GEODIST || costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX) {
         extraData.geoDistY = computeGeodistMatrix(VY, FY);
+    }
+    if (costMode == MULTIPLE_LABLE_SPACE_L2DIST || costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
+        extraData.geoDistY = computeL2DistMatrix(VY, FY);
     }
 }
 

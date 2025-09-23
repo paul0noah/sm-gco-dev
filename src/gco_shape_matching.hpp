@@ -18,6 +18,9 @@ enum COST_MODE {
     MULTIPLE_LABLE_SPACE_SO3,
     MULTIPLE_LABLE_SPACE_SE3,
     MULTIPLE_LABLE_SPACE_GEODIST,
+    MULTIPLE_LABLE_SPACE_GEODIST_MAX,
+    MULTIPLE_LABLE_SPACE_L2DIST,
+    MULTIPLE_LABLE_SPACE_L2DIST_MAX
 };
 
 struct TriangleWiseOpts {
@@ -219,7 +222,10 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
         diff = opts.lambdaSe3 * maxse3dist + opts.lambdaSo3 * so3dist;
     }
-    else if (costMode == MULTIPLE_LABLE_SPACE_GEODIST) {
+    else if (costMode == MULTIPLE_LABLE_SPACE_GEODIST ||
+             costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX ||
+             costMode == MULTIPLE_LABLE_SPACE_L2DIST ||
+             costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
         const std::tuple<int, int> commonVerticesBetweenTriangles = extraData->commonVXofFX(s1, s2);
         const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
         const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);
@@ -236,7 +242,14 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         const int targetVertex1_2 = extraData->LableFY(realLableIndex1, colIdx12);
         const int targetVertex2_1 = extraData->LableFY(realLableIndex2, colIdx21);
         const int targetVertex2_2 = extraData->LableFY(realLableIndex2, colIdx22);
-        diff = extraData->geoDistY(targetVertex1_1, targetVertex2_1) + extraData->geoDistY(targetVertex1_2, targetVertex2_2);
+
+
+        if (costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX || costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX) {
+            diff = std::max(extraData->geoDistY(targetVertex1_1, targetVertex2_1), extraData->geoDistY(targetVertex1_2, targetVertex2_2));
+        }
+        else {
+            diff = extraData->geoDistY(targetVertex1_1, targetVertex2_1) + extraData->geoDistY(targetVertex1_2, targetVertex2_2);
+        }
     }
 
     diff = opts.smoothScaleBeforeRobust * diff;
