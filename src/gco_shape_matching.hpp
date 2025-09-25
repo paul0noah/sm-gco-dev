@@ -27,7 +27,7 @@ struct TriangleWiseOpts {
     COST_MODE costMode = COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST;
     float smoothScaleBeforeRobust = 1.0;
     bool robustCost = false;
-    bool setInitialLables = true;
+    int setInitialLables = 1;
     float lambdaSe3 = 1.0;
     float lambdaSo3 = 1.0;
     float unaryWeight = 1.0;

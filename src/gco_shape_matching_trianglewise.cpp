@@ -24,7 +24,7 @@ namespace smgco {
  */
 std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
     GCOTrianglewiseExtra extraSmooth;
-    const bool setInitialLables = opts.setInitialLables;
+    const int setInitialLables = opts.setInitialLables;
 
     const COST_MODE costMode = opts.costMode;
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
@@ -87,12 +87,16 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
             for (int l = 0; l < numLables; l++) {
+                const bool isDegenerate =   extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 1) ||
+                                            extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 2) ||
+                                            extraSmooth.LableFY(l, 1) == extraSmooth.LableFY(l, 2);
+                const bool isDegnerateAndCareAboutDegenerate = setInitialLables > 1 ? isDegenerate : false;
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
                     sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
                 }
                 sum *= opts.featureFactor;
-                if (sum < minCost) {
+                if (sum < minCost && !isDegnerateAndCareAboutDegenerate) {
                     minCost = sum;
                     minLables(i) = l;
                 }
@@ -133,11 +137,108 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
         if (setInitialLables) {
-            PRINT_SMGCO("Setting initial lables");
-            for (int i = 0; i < numVertices; i++) {
-                int minIndex = minLables(i);
-                gc->setLabel(i, minIndex + i * numLables);
+            PRINT_SMGCO("Setting initial lables in mode " << setInitialLables);
+            if (setInitialLables == 1 || setInitialLables == 2) {
+                for (int i = 0; i < numVertices; i++) {
+                    int minIndex = minLables(i);
+                    gc->setLabel(i, minIndex + i * numLables);
+                }
             }
+            else if (setInitialLables == 3) {
+                // collect lable indexes in which certain vertices of Y appear
+                std::vector<std::vector<int>> vertexInLables;
+                vertexInLables.reserve(VY.rows());
+                for (int i = 0; i < VY.rows(); i++) {
+                    std::vector<int> temp; temp.reserve(400);
+                    vertexInLables.push_back(std::move(temp));
+                }
+                for (int l = 0; l < numLables; l++) {
+                    for (int j = 0; j < 3; j++) {
+                        const int vertexIndex = extraSmooth.LableFY(l, j);
+                        vertexInLables[vertexIndex].push_back(l);
+                    }
+                }
+
+                #if defined(_OPENMP)
+                #pragma omp parallel for
+                #endif
+                for (int i = 0; i < numVertices; i++) {
+                    // find best sum for each triangle
+                    int minIndex = 0;
+                    double bestSum = std::numeric_limits<double>::infinity();
+                    Eigen::Vector3i adjacentTris = AdjFX.row(i);
+                    for (int l = 0; l < numLables; l++) {
+                        double sum = 0;
+                        for (int j = 0; j < 3; j++) {
+                            sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
+                        }
+                        Eigen::Vector3d bestCost; bestCost.setConstant(std::numeric_limits<double>::infinity());
+
+                        // find best cost for neighbouring lables that are in zero distance of the current lable l
+                        for (int adjIdx = 0; adjIdx < 3; adjIdx++) {
+                            const int adjTri = adjacentTris(adjIdx);
+                            const std::tuple<int, int> commonVerticesBetweenTriangles = extraSmooth.commonVXofFX(i, adjTri);
+                            const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
+                            const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);
+                            int colIdx11 = -1, colIdx12 = -1, colIdx21 = -1, colIdx22 = -1;
+                            for (int j = 0; j < 3; j++) {
+                                if (FX(i, j) == idxX1) colIdx11 = j;
+                                if (FX(i, j) == idxX2) colIdx12 = j;
+                                if (FX(adjTri, j) == idxX1) colIdx21 = j;
+                                if (FX(adjTri, j) == idxX2) colIdx22 = j;
+                            }
+                            const int targetVertex1_1 = extraSmooth.LableFY(l, colIdx11);
+                            const int targetVertex1_2 = extraSmooth.LableFY(l, colIdx12);
+
+                            //for (int ll = 0; ll < numLables; ll++) {
+                            for (const auto& ll : vertexInLables[targetVertex1_1]) {
+
+                                const int targetVertex2_1 = extraSmooth.LableFY(ll, colIdx21);
+                                const int targetVertex2_2 = extraSmooth.LableFY(ll, colIdx22);
+
+                                const bool distanceIsZero = targetVertex1_1 == targetVertex2_1 &&
+                                                            targetVertex1_2 == targetVertex2_2;
+                                int remainingVertex1, remainingVertex2;
+                                for (int j = 0; j < 3; j++) {
+                                    if (colIdx11 != j && colIdx12 != j) {
+                                        remainingVertex1 = extraSmooth.LableFY(l, j);
+                                    }
+                                    if (colIdx21 != j && colIdx22 != j) {
+                                        remainingVertex2 = extraSmooth.LableFY(ll, j);
+                                    }
+                                }
+                                const bool remainingVertexNotTheSame = remainingVertex1 != remainingVertex2;
+                                if (distanceIsZero && remainingVertexNotTheSame) {
+                                    double cost = 0;
+                                    for (int j = 0; j < 3; j++) {
+                                        cost += perVertexFeatureDifference(FX(adjIdx, j), extraSmooth.LableFY(ll, j));
+                                    }
+                                    if (cost < bestCost(adjIdx)) {
+                                        bestCost(adjIdx) = cost;
+                                    }
+                                }
+                            }
+                        }
+                        for (int adjIdx = 0; adjIdx < 3; adjIdx++) {
+                            sum += bestCost(adjIdx);
+                        }
+                        if (sum < bestSum) {
+                            bestSum = sum;
+                            minIndex = l;
+                        }
+                    }
+                    #if defined(_OPENMP)
+                    #pragma omp critical
+                    #endif
+                    gc->setLabel(i, minIndex + i * numLables);
+                }
+            }
+            else {
+                PRINT_SMGCO("Init mode not supported :( I will not init -> this could cause bad resaults");
+            }
+
+            GETTIME(t4);
+            PRINT_SMGCO(" -> init lables done (" << DURATION_S(t3, t4) << " s)");
         }
 
         PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
