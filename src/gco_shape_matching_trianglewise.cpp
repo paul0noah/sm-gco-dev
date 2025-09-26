@@ -158,7 +158,12 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 }
                 for (int l = 0; l < numLables; l++) {
                     for (int j = 0; j < 3; j++) {
+                        const Eigen::Vector3i lable = extraSmooth.LableFY.row(l);
                         const int vertexIndex = extraSmooth.LableFY(l, j);
+                        if (setInitialLables == 3) {
+                            const bool isDegenerate = lable(0) == lable(1) || lable(0) == lable(2) || lable(1) == lable(2);
+                            if (isDegenerate) continue;
+                        }
                         vertexInLables[vertexIndex].push_back(l);
                     }
                 }
