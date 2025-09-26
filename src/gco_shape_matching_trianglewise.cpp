@@ -14,6 +14,11 @@
 #define PRINT_SMGCO(x) std::cout << prefix << x << std::endl;
 
 namespace smgco {
+std::string INIT_METHODS[5] = { "NO_INIT",
+                                "MIN_LABEL",
+                                "MIN_LABEL_NON_DEGENERATE",
+                                "TRI_NEIGHBOURS_NON_DEGENERATE",
+                                "TRI_NEIGHBOURS"};
 /*
 
 
@@ -135,16 +140,15 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
 
-
+        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[setInitialLables] << ", " << setInitialLables);
         if (setInitialLables) {
-            PRINT_SMGCO("Setting initial lables in mode " << setInitialLables);
             if (setInitialLables == 1 || setInitialLables == 2) {
                 for (int i = 0; i < numVertices; i++) {
                     int minIndex = minLables(i);
                     gc->setLabel(i, minIndex + i * numLables);
                 }
             }
-            else if (setInitialLables == 3) {
+            else if (setInitialLables >= 3) {
                 // collect lable indexes in which certain vertices of Y appear
                 std::vector<std::vector<int>> vertexInLables;
                 vertexInLables.reserve(VY.rows());
@@ -167,15 +171,18 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     int minIndex = 0;
                     double bestSum = std::numeric_limits<double>::infinity();
                     Eigen::Vector3i adjacentTris = AdjFX.row(i);
-                    for (int l = 0; l < numLables; l++) {
+
+                    const int iterStart = setInitialLables == 3 ? numDegenerate : 0;
+                    for (int l = iterStart; l < numLables; l++) {
                         double sum = 0;
                         for (int j = 0; j < 3; j++) {
                             sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
                         }
-                        Eigen::Vector3d bestCost; bestCost.setConstant(std::numeric_limits<double>::infinity());
 
                         // find best cost for neighbouring lables that are in zero distance of the current lable l
                         for (int adjIdx = 0; adjIdx < 3; adjIdx++) {
+                            double bestCost = std::numeric_limits<double>::infinity();
+                            bool output = false;
                             const int adjTri = adjacentTris(adjIdx);
                             const std::tuple<int, int> commonVerticesBetweenTriangles = extraSmooth.commonVXofFX(i, adjTri);
                             const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
@@ -196,31 +203,34 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                                 const int targetVertex2_1 = extraSmooth.LableFY(ll, colIdx21);
                                 const int targetVertex2_2 = extraSmooth.LableFY(ll, colIdx22);
 
-                                const bool distanceIsZero = targetVertex1_1 == targetVertex2_1 &&
+                                const bool isNeighbouring = targetVertex1_1 == targetVertex2_1 &&
                                                             targetVertex1_2 == targetVertex2_2;
-                                int remainingVertex1, remainingVertex2;
+                                if (!isNeighbouring) {
+                                    continue;
+                                }
+                                int remainingVertex1=-1, remainingVertex2=-1, remainingVertexIdx;
                                 for (int j = 0; j < 3; j++) {
                                     if (colIdx11 != j && colIdx12 != j) {
                                         remainingVertex1 = extraSmooth.LableFY(l, j);
                                     }
                                     if (colIdx21 != j && colIdx22 != j) {
                                         remainingVertex2 = extraSmooth.LableFY(ll, j);
+                                        remainingVertexIdx = j;
                                     }
                                 }
-                                const bool remainingVertexNotTheSame = remainingVertex1 != remainingVertex2;
-                                if (distanceIsZero && remainingVertexNotTheSame) {
-                                    double cost = 0;
-                                    for (int j = 0; j < 3; j++) {
-                                        cost += perVertexFeatureDifference(FX(adjIdx, j), extraSmooth.LableFY(ll, j));
-                                    }
-                                    if (cost < bestCost(adjIdx)) {
-                                        bestCost(adjIdx) = cost;
+                                const bool remainingVertexNotTheSame = setInitialLables == 3 ? remainingVertex1 != remainingVertex2 : true;
+                                if (remainingVertexNotTheSame) {
+                                    const double cost = perVertexFeatureDifference(FX(adjIdx, remainingVertexIdx), extraSmooth.LableFY(ll, remainingVertexIdx));
+                                    if (cost < bestCost) {
+                                        bestCost = cost;
+                                        if (!output) {
+                                            output = true;
+                                            //std::cout << adjIdx << ": " << extraSmooth.LableFY.row(ll) << std::endl;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        for (int adjIdx = 0; adjIdx < 3; adjIdx++) {
-                            sum += bestCost(adjIdx);
+                            sum += bestCost;
                         }
                         if (sum < bestSum) {
                             bestSum = sum;
