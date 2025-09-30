@@ -189,6 +189,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                             double bestCost = std::numeric_limits<double>::infinity();
                             bool output = false;
                             const int adjTri = adjacentTris(adjIdx);
+                            if (adjTri == -1) continue;
                             const std::tuple<int, int> commonVerticesBetweenTriangles = extraSmooth.commonVXofFX(i, adjTri);
                             const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
                             const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);
