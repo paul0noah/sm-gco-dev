@@ -35,4 +35,13 @@ void GCOSM::setMaxIter(const int newMaxIter) {
     numIters = newMaxIter;
 }
 
+
+void GCOSM::writeToFile(const std::string& filename) {
+    utils::writeMatrixToFile(VX, filename + "VX");
+    utils::writeMatrixToFile(VY, filename + "VY");
+    utils::writeMatrixToFile(FX, filename + "FX");
+    utils::writeMatrixToFile(FY, filename + "FY");
+    utils::writeMatrixToFile(perVertexFeatureDifference, filename + "fdiff");
+}
+
 } // namespace smgco

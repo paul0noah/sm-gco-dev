@@ -87,6 +87,8 @@ class GCOSM {
 
     void setDataWeight(const float newDataWeight);
     void setMaxIter(const int newMaxIter);
+
+    void writeToFile(const std::string& filename);
 };
 
 
