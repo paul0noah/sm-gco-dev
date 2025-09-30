@@ -178,7 +178,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     Eigen::Vector3i adjacentTris = AdjFX.row(i);
 
                     const int iterStart = setInitialLables == 3 ? numDegenerate : 0;
-                    for (int l = iterStart; l < numLables; l++) {
+                    for (int l = iterStart; l < numLables; l++) { // this loop is lable of the center triangle
                         double sum = 0;
                         for (int j = 0; j < 3; j++) {
                             sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
@@ -225,7 +225,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                                 }
                                 const bool remainingVertexNotTheSame = setInitialLables == 3 ? remainingVertex1 != remainingVertex2 : true;
                                 if (remainingVertexNotTheSame) {
-                                    const double cost = perVertexFeatureDifference(FX(adjIdx, remainingVertexIdx), extraSmooth.LableFY(ll, remainingVertexIdx));
+                                    const double cost = perVertexFeatureDifference(FX(adjTri, remainingVertexIdx), extraSmooth.LableFY(ll, remainingVertexIdx));
                                     if (cost < bestCost) {
                                         bestCost = cost;
                                         if (!output) {
