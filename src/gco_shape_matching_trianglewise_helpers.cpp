@@ -333,18 +333,21 @@ Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
     }
 
     Eigen::MatrixXi lableSpace(lableSpaceSize, 3);
-    if (opts.lableSpaceDegnerate) {
-        lableSpace.block(0, 0, degenerateTris.rows(), 3) = degenerateTris;
-    }
+    lableSpace.setConstant(-1);
 
-    lableSpace.block(degenerateTris.rows(), 0, numCycleTris, 3) = cycleTriangles;
 
-    lableSpace.block(degenerateTris.rows() + numCycleTris, 0, numCycleTris, 3) =
+    lableSpace.block(0, 0, numCycleTris, 3) = cycleTriangles;
+
+    lableSpace.block(numCycleTris, 0, numCycleTris, 3) =
                         cycleTriangles(Eigen::all, (Eigen::Vector3i() << 1, 2, 0).finished());
 
-    lableSpace.block(degenerateTris.rows() + 2 * numCycleTris, 0, numCycleTris, 3) =
+    lableSpace.block(2 * numCycleTris, 0, numCycleTris, 3) =
                         cycleTriangles(Eigen::all, (Eigen::Vector3i() << 2, 0, 1).finished());
 
+
+    if (opts.lableSpaceDegnerate) {
+        lableSpace.block(3 * numCycleTris, 0, numDegenerate, 3) = degenerateTris;
+    }
 
 
     return lableSpace;
