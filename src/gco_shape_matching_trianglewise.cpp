@@ -89,6 +89,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             addEnergy = true;
         }
         Eigen::MatrixXi minLables(numVertices, 1); minLables.setConstant(0);
+        Eigen::MatrixXf siteLabelCost;
+        if (opts.labelOrder >= 3) {
+            siteLabelCost = Eigen::MatrixXf(numVertices * numLables, 1);
+        }
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
             for (int l = 0; l < numLables; l++) {
@@ -107,6 +111,9 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 }
                 if (addEnergy) {
                     sum += energy(i, l);
+                }
+                if (opts.labelOrder >= 3) {
+                    siteLabelCost(i * numLables + l) = sum;
                 }
                 const int dataCost = (int) (SCALING_FACTOR * opts.unaryWeight * sum);
 
@@ -256,6 +263,62 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             GETTIME(t4);
             PRINT_SMGCO(" -> init lables done (" << DURATION_S(t3, t4) << " s)");
         }
+
+        if (opts.labelOrder == 1) {
+            PRINT_SMGCO("Random label order");
+            srand(1618);
+            const bool setRandom = true;
+            gc->setLabelOrder(setRandom);
+        }
+        if (opts.labelOrder == 2 && numDegenerate > 0) {
+            PRINT_SMGCO("Degnerate labels ordered last");
+            Eigen::MatrixXi labelOrder(numLables * numVertices, 1);
+            const int numNonDegenerate = numLables - numDegenerate;
+            const int startIndexDegenerate = numVertices * numNonDegenerate;
+            #if defined(_OPENMP)
+            #pragma omp parallel
+            #endif
+            for (int i = 0; i < numVertices; i++) {
+                for (int l = 0; l < numLables; l++) {
+                    const int currentLabelIndex = i * numLables + l;
+                    int newLabelIndex = -1;
+                    if (l >= numNonDegenerate) {
+                        newLabelIndex = startIndexDegenerate + i * numDegenerate + l - numNonDegenerate;
+                    }
+                    else {
+                        newLabelIndex = i * numNonDegenerate + l;
+                    }
+                    labelOrder(currentLabelIndex) = newLabelIndex;
+                }
+            }
+
+            gc->setLabelOrder(labelOrder.data(), numLables * numVertices);
+        }
+        if (opts.labelOrder == 3) {
+            PRINT_SMGCO("Labels ordered according to min cost");
+            std::vector<int> sortedLabels;
+            utils::argsort(siteLabelCost, sortedLabels);
+            gc->setLabelOrder(sortedLabels.data(), numLables * numVertices);
+        }
+        if (opts.labelOrder == 4) {
+            PRINT_SMGCO("Labels ordered according to alternating min cost");
+            const auto siteLabelCostR = siteLabelCost.reshaped<Eigen::RowMajor>(numVertices, numLables); // no copy
+            Eigen::MatrixXi sortedLabels(numVertices * numLables, 1);
+            #if defined(_OPENMP)
+            #pragma omp parallel
+            #endif
+            for (int i = 0; i < numVertices; i++) {
+                std::vector<int> sortedLabelsPerSite;
+                utils::argsort(siteLabelCostR.row(i), sortedLabelsPerSite);
+                for (int l = 0; l < numLables; l++) {
+                    // write such that we have [bestSite0, bestSite1, ...., secondBestSite0, secondBestSite1, ....]
+                    sortedLabels(l * numVertices + i) = sortedLabelsPerSite[l] + i * numLables;
+                }
+            }
+            gc->setLabelOrder(sortedLabels.data(), numLables * numVertices);
+        }
+
+
 
         PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         GETTIME(t4);

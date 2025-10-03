@@ -40,6 +40,7 @@ struct TriangleWiseOpts {
     float wksFactor = 0.0f;
     float featureFactor = 1.0f;
     bool glueSolution = true;
+    int labelOrder = 0; // 0 no order, 1 random, 2 degenerate last, 3 mincost
 };
 
 typedef struct GCOTrianglewiseExtra {
