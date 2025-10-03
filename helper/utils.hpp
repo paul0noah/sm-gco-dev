@@ -15,6 +15,7 @@
 #include <Eigen/Dense>
 #include <fstream>
 #include <tsl/robin_set.h>
+#include <numeric>
 
 #define ASSERT_NEVER_REACH assert(false)
 #define FLOAT_EPSI 1e-7
@@ -213,6 +214,20 @@ typename Derived::Scalar median( const Eigen::DenseBase<Derived>& d ){
 }
 
 std::tuple<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::VectorXi, Eigen::MatrixXi, Eigen::VectorX<bool>> getSTAR(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
+
+
+template <typename Derived>
+void argsort(const Eigen::MatrixBase<Derived>& v, std::vector<int>& idx) {
+    // indices 0..n-1
+    idx = std::vector<int>(v.size());
+    std::iota(idx.begin(), idx.end(), 0);
+
+    // sort indices based on comparing values in v
+    std::sort(idx.begin(), idx.end(),
+              [&v](int i1, int i2) { return v(i1) < v(i2); });
+
+    //return idx;
+}
 
 } // namespace utils
 
