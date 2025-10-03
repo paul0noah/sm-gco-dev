@@ -88,7 +88,6 @@ smgco.set_max_iter(maxiter)
 optime, point_map, tri_tri_matching, raw_matching, raw_tri_tri_matching = smgco.triangle_wise(opts)
 print(f"Took {optime} s")
 
-point_map = np.unique(product_space[result_vec.astype('bool'), :-1][:, [0, 2]], axis=0)
 ```
 
 # 🎓 Attribution
