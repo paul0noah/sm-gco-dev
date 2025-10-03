@@ -389,7 +389,23 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
     }
     else {
-        gluedp2p = p2p_unique;
+        std::vector<std::vector<int>> perVertexMatches(VX.rows());
+        gluedp2p = Eigen::MatrixXi(VX.rows(), 2);
+        for (int i = 0; i < p2p_unique.rows(); i++) {
+            perVertexMatches[p2p_unique(i, 0)].push_back(p2p_unique(i, 1));
+        }
+        for (int i = 0; i < VX.rows(); i++) {
+            double bestEnergy = std::numeric_limits<double>::infinity();
+            int bestVertex = 0;
+            for (const auto& targetVertex : perVertexMatches[i]) {
+                const float energy = perVertexFeatureDifference(i, targetVertex);
+                if (energy < bestEnergy) {
+                    bestEnergy = energy;
+                    bestVertex = targetVertex;
+                }
+            }
+            gluedp2p.row(i) << i, bestVertex;
+        }
         gluedSolution = result;
     }
     return std::make_tuple(optimisationTime, gluedp2p, gluedSolution, p2p_unique, result);
