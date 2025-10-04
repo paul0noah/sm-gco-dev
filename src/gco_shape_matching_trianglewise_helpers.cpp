@@ -126,7 +126,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
                           const Eigen::MatrixXi& lableSpace,
                           GCOTrianglewiseExtra& extraData) {
 
-    const COST_MODE costMode = extraData.costMode;
+    const COST_MODE costMode = extraData.opts.costMode;
 
     Eigen::MatrixXf p2pDeformation(VY.rows(), VY.rows());
     const bool smoothGeodesic = false;

@@ -28,7 +28,8 @@ std::string INIT_METHODS[5] = { "NO_INIT",
 
  */
 std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> GCOSM::triangleWise(TriangleWiseOpts opts) {
-    GCOTrianglewiseExtra extraSmooth;
+
+    GCOTrianglewiseExtra extraSmooth(opts);
     const int setInitialLables = opts.setInitialLables;
 
     const COST_MODE costMode = opts.costMode;
@@ -38,7 +39,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
     int numDegenerate = 0;
     extraSmooth.LableFY = buildLableSpace(VY, FY, numDegenerate, opts);
     const int numLables = extraSmooth.LableFY.rows();
-    extraSmooth.costMode = costMode;
     extraSmooth.numLables = numLables;
     extraSmooth.VX = VX.cast<float>();
     extraSmooth.FX = FX;

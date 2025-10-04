@@ -32,7 +32,7 @@ struct TriangleWiseOpts {
     float lambdaSo3 = 1.0;
     float unaryWeight = 1.0;
     float smoothWeight = 1.0;
-    int lableSpaceCycleSize = 6;
+    int lableSpaceCycleSize = 4;
     float lableSpaceAngleThreshold = M_PI / 2;
     bool lableSpaceDegnerate = true;
     float membraneFactor = 0.0f;
@@ -44,10 +44,9 @@ struct TriangleWiseOpts {
 };
 
 typedef struct GCOTrianglewiseExtra {
-    COST_MODE costMode;
     // not all of the below matrices are needed for all cost modes
     float lambda;
-    TriangleWiseOpts opts;
+    const TriangleWiseOpts& opts;
     int numLables;
     Eigen::MatrixXf p2pDeformation;
     Eigen::MatrixXf VX;
@@ -59,6 +58,7 @@ typedef struct GCOTrianglewiseExtra {
     Eigen::MatrixXi lableToIndex;
     Eigen::MatrixXf geoDistY;
     std::unordered_map<std::tuple<GCoptimization::LabelID, GCoptimization::LabelID>, int> cache;
+    GCOTrianglewiseExtra(TriangleWiseOpts& opts) : opts(opts) {}
 } GCOTrianglewiseExtra;
 
 
@@ -138,7 +138,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
 
     const TriangleWiseOpts opts = extraData->opts;
-    const COST_MODE costMode = extraData->costMode;
+    const COST_MODE costMode = extraData->opts.costMode;
 
 
     float diff = 0;
