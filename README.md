@@ -29,7 +29,13 @@ opts.cost_mode = COST_MODE.MULTIPLE_LABLE_SPACE_GEODIST      # sum of geodesic d
 #opts.cost_mode = COST_MODE.MULTIPLE_LABLE_SPACE_L2DIST_MAX  # max of l2 distance between shared triangles
 
 opts.smooth_scale_before_robust = 1.0 # scale of the pairwise term before applying robust
-opts.robust_cost = False # apply robust cost to pairwise terms, i.e. a logarithm
+opts.robust_cost = 0 # no robust
+# opts.robust_cost = 1 # robust log(1 + smooth)
+# opts.robust_cost = 2 # min(geodistMean, smooth)
+# opts.robust_cost = 3 # min(0.25 * geodistMax, smooth)
+# opts.robust_cost = 4 # min(0.1 * geodistMax, smooth)
+
+
 opts.unary_weight = 1.0 # weight of data term
 opts.smooth_weight = 10000.0 # weight of pairwise term
 

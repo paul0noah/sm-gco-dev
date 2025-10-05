@@ -303,6 +303,13 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
     if (costMode == MULTIPLE_LABLE_SPACE_L2DIST || costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
         extraData.geoDistY = computeL2DistMatrix(VY, FY);
     }
+    if (extraData.opts.robustCost == 2) {
+        extraData.robustMinThres = extraData.geoDistY.mean();
+    }
+    if (extraData.opts.robustCost > 2) {
+        const double factor = extraData.opts.robustCost == 3 ? 0.25 : 0.1;
+        extraData.robustMinThres = factor * extraData.geoDistY.maxCoeff();
+    }
 }
 
 

@@ -26,7 +26,7 @@ enum COST_MODE {
 struct TriangleWiseOpts {
     COST_MODE costMode = COST_MODE::MULTIPLE_LABLE_SPACE_GEODIST;
     float smoothScaleBeforeRobust = 1.0;
-    bool robustCost = false;
+    int robustCost = 0; // 0: no, 1: log(1 + smooth), 2: min(geodistMean, smooth), 3: min(0.25 * geodistMax, smooth), 4: min(0.1 * geodistMax, smooth)
     int setInitialLables = 1;
     float lambdaSe3 = 1.0;
     float lambdaSo3 = 1.0;
@@ -48,6 +48,7 @@ typedef struct GCOTrianglewiseExtra {
     float lambda;
     const TriangleWiseOpts& opts;
     int numLables;
+    float robustMinThres;
     Eigen::MatrixXf p2pDeformation;
     Eigen::MatrixXf VX;
     Eigen::MatrixXi FX;
@@ -257,8 +258,11 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
 
     diff = opts.smoothScaleBeforeRobust * diff;
 
-    if (opts.robustCost) {
-        diff = std::log(diff);
+    if (opts.robustCost == 1) {
+        diff = std::log(1 + diff);
+    }
+    else if (opts.robustCost > 1) {
+        diff = std::min(extraData->robustMinThres, diff);
     }
 
     diff = opts.smoothWeight * diff;
