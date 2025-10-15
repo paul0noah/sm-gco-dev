@@ -62,22 +62,22 @@ Eigen::MatrixXf DeformationEnergy::get(const int numDegenerate) {
         //#if defined(_OPENMP)
         //#pragma omp section
         //#endif
-        deformationEnergy.block(0, 0, numDegenerate, 1) = membraneFactor *
-            2 * membraneEnergy.get(shapeB, shapeA,
-                               FbCombo.block(0, 0, numDegenerate, 3),
-                               FaCombo.block(0, 0, numDegenerate, 3));
+        deformationEnergy.block(0, 0, numNonDegenerate, 1) = membraneFactor * (
+                   membraneEnergy.get(shapeA, shapeB,
+                                      FaCombo.block(0, 0, numNonDegenerate, 3),
+                                      FbCombo.block(0, 0, numNonDegenerate, 3)) +
+                   membraneEnergy.get(shapeB, shapeA,
+                                      FbCombo.block(0, 0, numNonDegenerate, 3),
+                                      FaCombo.block(0, 0, numNonDegenerate, 3)));
 
         // non-degenerate part of membrane energy
         //#if defined(_OPENMP)
         //#pragma omp section
         //#endif
-        deformationEnergy.block(numDegenerate, 0, numNonDegenerate, 1) = membraneFactor * (
-            membraneEnergy.get(shapeA, shapeB,
-                               FaCombo.block(numDegenerate, 0, numNonDegenerate, 3),
-                               FbCombo.block(numDegenerate, 0, numNonDegenerate, 3)) +
-            membraneEnergy.get(shapeB, shapeA,
-                               FbCombo.block(numDegenerate, 0, numNonDegenerate, 3),
-                               FaCombo.block(numDegenerate, 0, numNonDegenerate, 3)));
+        deformationEnergy.block(numNonDegenerate, 0, numDegenerate, 1) = membraneFactor *
+                    2 * membraneEnergy.get(shapeA, shapeB,
+                               FaCombo.block(numNonDegenerate, 0, numDegenerate, 3),
+                               FbCombo.block(numNonDegenerate, 0, numDegenerate, 3));
 
 
     }
