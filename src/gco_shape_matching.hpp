@@ -41,6 +41,7 @@ struct TriangleWiseOpts {
     float featureFactor = 1.0f;
     bool glueSolution = true;
     int labelOrder = 0; // 0 no order, 1 random, 2 degenerate last, 3 mincost, 4 alternating min cost
+    float sameLabelCost = 0.0;
 };
 
 typedef struct GCOTrianglewiseExtra {
@@ -142,7 +143,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     const COST_MODE costMode = extraData->opts.costMode;
 
 
-    float diff = 0;
+    float diff = 0.0f;
 
     if (costMode == SINGLE_LABLE_SPACE_L2) {
         diff = extraData->p2pDeformation(l1, l2);
@@ -253,6 +254,12 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         }
         else {
             diff = extraData->geoDistY(targetVertex1_1, targetVertex2_1) + extraData->geoDistY(targetVertex1_2, targetVertex2_2);
+        }
+
+        if (opts.sameLabelCost > 0) {
+            // this ensures that we have a metric, in theory we would neet an if statement but the case that l1 == l2 cannot happen for us
+            // if (l1 != l2)
+            diff += opts.sameLabelCost;
         }
     }
 

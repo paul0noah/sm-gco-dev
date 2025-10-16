@@ -65,6 +65,7 @@ opts.label_order = 4 # mincost labels come first but are alternating between tri
 opts.membrane_energy_weight = 0.0
 opts.bending_energy_weight = 0.0
 opts.feature_weight = 1.0
+opts.same_label_cost = 0.0 # if > 0.0 then we have a metric and not a pseudometric 
 
 # glue the solution to write output
 opts.glue_solution = True
