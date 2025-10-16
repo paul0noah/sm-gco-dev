@@ -20,7 +20,8 @@ enum COST_MODE {
     MULTIPLE_LABLE_SPACE_GEODIST,
     MULTIPLE_LABLE_SPACE_GEODIST_MAX,
     MULTIPLE_LABLE_SPACE_L2DIST,
-    MULTIPLE_LABLE_SPACE_L2DIST_MAX
+    MULTIPLE_LABLE_SPACE_L2DIST_MAX,
+    MULTIPLE_LABLE_SPACE_GEODIST_SO3,
 };
 
 struct TriangleWiseOpts {
@@ -172,7 +173,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         diff = std::max({diff11_21, diff11_22, diff12_21, diff12_22});
 
     }
-    else if (costMode == MULTIPLE_LABLE_SPACE_SO3) {
+    else if (costMode == MULTIPLE_LABLE_SPACE_SO3 || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         const int rowIndex1 = extraData->lableToIndex(l1, 0);
         const int rowIndex2 = extraData->lableToIndex(l2, 0);
         const int colIndex1 = extraData->lableToIndex(l1, 1);
@@ -182,7 +183,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
         double innerProductRot = fabs(rotation1.w() * rotation2.w() + rotation1.vec().dot(rotation2.vec()));
         innerProductRot = std::max(std::min(1.0, innerProductRot), -1.0); // clip into value range [-1, ..., 1]
 
-        diff = 2 * acos(innerProductRot);
+        diff += opts.lambdaSo3 * 2 * acos(innerProductRot);
     }
     else if (costMode == MULTIPLE_LABLE_SPACE_SE3) {
         const int rowIndex1 = extraData->lableToIndex(l1, 0);
@@ -230,7 +231,8 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     else if (costMode == MULTIPLE_LABLE_SPACE_GEODIST ||
              costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX ||
              costMode == MULTIPLE_LABLE_SPACE_L2DIST ||
-             costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
+             costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX ||
+             costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         const std::tuple<int, int> commonVerticesBetweenTriangles = extraData->commonVXofFX(s1, s2);
         const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
         const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);

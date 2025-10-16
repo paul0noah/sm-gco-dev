@@ -161,7 +161,8 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         costMode == MULTIPLE_LABLE_SPACE_GEODIST ||
         costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX ||
         costMode == MULTIPLE_LABLE_SPACE_L2DIST ||
-        costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
+        costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX||
+        costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         TupleMatrixInt commonVertices(FX.rows(), FX.rows());
         Eigen::MatrixXi AdjFX;
         igl::triangle_triangle_adjacency(FX, AdjFX);
@@ -197,7 +198,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
         extraData.p2pDeformation = p2pDeformation;
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_SO3 || costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3) {
+    if (costMode == MULTIPLE_LABLE_SPACE_SO3 || costMode == MULTIPLE_LABLE_SPACE_L2 || costMode == MULTIPLE_LABLE_SPACE_SE3 || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         Eigen::MatrixXd NX, NY, TriCentroidsX, TriCentroidsY;
         igl::per_face_normals(VX, FX, NX);
         igl::per_face_normals(VY, lableSpace, NY);
@@ -297,10 +298,10 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.translationsXtoY = tranlastionsXtoY;
 
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_GEODIST || costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX) {
+    if (costMode == MULTIPLE_LABLE_SPACE_GEODIST || costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         extraData.geoDistY = computeGeodistMatrix(VY, FY);
     }
-    if (costMode == MULTIPLE_LABLE_SPACE_L2DIST || costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX) {
+    if (costMode == MULTIPLE_LABLE_SPACE_L2DIST || costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         extraData.geoDistY = computeL2DistMatrix(VY, FY);
     }
     if (extraData.opts.robustCost == 2) {
