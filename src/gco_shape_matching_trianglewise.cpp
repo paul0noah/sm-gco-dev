@@ -44,6 +44,12 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
     extraSmooth.FX = FX;
     PRINT_SMGCO("num lables = " << numVertices * numLables << ", num lables per site = " << numLables);
 
+    if (opts.sameLabelCost < 0.0) {
+        PRINT_SMGCO("Automatically setting same label cost...");
+        opts.sameLabelCost = std::max(1e-3, perVertexFeatureDifference.minCoeff());
+        PRINT_SMGCO("   same label cost = " << opts.sameLabelCost);
+    }
+
     Eigen::MatrixXi AdjFX;
     igl::triangle_triangle_adjacency(FX, AdjFX);
 
