@@ -307,7 +307,22 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
     if (extraData.opts.robustCost == 2) {
         extraData.robustMinThres = extraData.geoDistY.mean();
     }
-    if (extraData.opts.robustCost > 2) {
+    if (extraData.opts.robustCost == 5) {
+        Eigen::MatrixXf L;
+        igl::edge_lengths(VY, FY, L);
+        extraData.robustMinThres = 2 * L.minCoeff();
+    }
+    else if (extraData.opts.robustCost == 6) {
+        Eigen::MatrixXf L;
+        igl::edge_lengths(VY, FY, L);
+        extraData.robustMinThres = 2 * L.mean();
+    }
+    else if (extraData.opts.robustCost == 7) {
+        Eigen::MatrixXf L;
+        igl::edge_lengths(VY, FY, L);
+        extraData.robustMinThres = 2 * L.maxCoeff();
+    }
+    else if (extraData.opts.robustCost > 2) {
         const double factor = extraData.opts.robustCost == 3 ? 0.25 : 0.1;
         extraData.robustMinThres = factor * extraData.geoDistY.maxCoeff();
     }

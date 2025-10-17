@@ -270,6 +270,11 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     if (opts.robustCost == 1) {
         diff = std::log(1 + diff);
     }
+    else if (opts.robustCost >= 5) {
+        // hinge like loss but concave
+        if (diff > extraData->robustMinThres)
+            diff = 0.001 * diff;
+    }
     else if (opts.robustCost > 1) {
         diff = std::min(extraData->robustMinThres, diff);
     }
