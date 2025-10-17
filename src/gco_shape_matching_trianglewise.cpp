@@ -68,7 +68,8 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 const int targetId = AdjFX(f, j);
                 if (targetId >= 0) {
                     const int weight = 1;
-                    gc->setNeighbors(srcId, targetId, weight);
+                    if (srcId < targetId) // make sure we dont add neighbours twice...
+                        gc->setNeighbors(srcId, targetId, weight);
                 }
             }
         }
