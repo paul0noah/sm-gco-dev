@@ -22,6 +22,9 @@ from sm_gco import GCOSM, COST_MODE, TriangleWiseOpts
 # init the options
 opts = TriangleWiseOpts()
 
+# algorithm for optimisation
+opts.algorithm = 4 # 0 is alpha beta swap, 1 is alpha expansion, 4 is our custom alpha expansion
+
 # pairwise cost modes
 opts.cost_mode = COST_MODE.MULTIPLE_LABLE_SPACE_GEODIST      # sum of geodesic distance between shared triangles
 #opts.cost_mode = COST_MODE.MULTIPLE_LABLE_SPACE_GEODIST_MAX # max of geodesic distance between shared triangles
@@ -48,7 +51,7 @@ opts.smooth_weight = 10000.0 # weight of pairwise term
 opts.set_initial_lables = 4 # init with degenerate min cost triangle neighbours
 
 # label space settings
-opts.lable_space_cycle_size = 4 # max cycle size to extract new triangles from
+opts.lable_space_cycle_size = 4 # max cycle size to extract new triangles from, larger values means larger runtime
 opts.lable_space_angle_thres = np.pi / 3 # angle to extract orientation preserving triangles from
 opts.lable_space_degenerate = True # allow matching of triangles to edges/vertices
 

@@ -60,6 +60,7 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("feature_weight", &TriangleWiseOpts::featureFactor)
             .def_readwrite("label_order", &TriangleWiseOpts::labelOrder)
             .def_readwrite("same_label_cost", &TriangleWiseOpts::sameLabelCost)
+            .def_readwrite("algorithm", &TriangleWiseOpts::algorithm)
             .def_readwrite("glue_solution", &TriangleWiseOpts::glueSolution);
 
 

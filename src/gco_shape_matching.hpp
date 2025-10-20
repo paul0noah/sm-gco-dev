@@ -43,6 +43,7 @@ struct TriangleWiseOpts {
     bool glueSolution = true;
     int labelOrder = 0; // 0 no order, 1 random, 2 degenerate last, 3 mincost, 4 alternating min cost
     float sameLabelCost = 0.0;
+    int algorithm = true; // 0 = alpha beta swap, 1 = alpha expansion, 4 = custom alpha expansion
 };
 
 typedef struct GCOTrianglewiseExtra {

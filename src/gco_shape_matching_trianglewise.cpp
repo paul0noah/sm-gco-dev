@@ -12,6 +12,25 @@
 #define DURATION_MS(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count()
 #define DURATION_S(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count() / 1000
 #define PRINT_SMGCO(x) std::cout << prefix << x << std::endl;
+#if defined(_OPENMP)
+int omp_thread_count() {
+    // workaround for omp_get_num_threads()
+    int n = 0;
+    #pragma omp parallel reduction(+:n)
+    n += 1;
+    return n;
+}
+inline int getThreadId() {
+    return omp_get_thread_num();
+}
+#else
+int omp_thread_count() {
+    return 1;
+}
+inline int getThreadId() {
+    return 0;
+}
+#endif
 
 namespace smgco {
 std::string INIT_METHODS[5] = { "NO_INIT",
@@ -97,8 +116,13 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
         Eigen::MatrixXi minLables(numVertices, 1); minLables.setConstant(0);
         Eigen::MatrixXf siteLabelCost;
+        Eigen::MatrixXi siteLabelCostInt;
         if (opts.labelOrder >= 3) {
             siteLabelCost = Eigen::MatrixXf(numVertices * numLables, 1);
+        }
+        if (opts.algorithm == 4) {
+            siteLabelCostInt = Eigen::MatrixXi(numVertices, numLables);
+            siteLabelCostInt.setConstant(-1);
         }
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
@@ -123,6 +147,9 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     siteLabelCost(i * numLables + l) = sum;
                 }
                 const int dataCost = (int) (SCALING_FACTOR * opts.unaryWeight * sum);
+                if (opts.algorithm == 4) {
+                    siteLabelCostInt(i, l) = dataCost;
+                }
 
                 const int fakeLable = i * numLables + l;
                 const int numSites = 1;
@@ -329,7 +356,147 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
         PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         GETTIME(t4);
-        gc->expansion(numIters);
+        if (opts.algorithm == 1) {
+            gc->expansion(numIters);
+        }
+        else if (opts.algorithm == 0) {
+            gc->swap(numIters);
+        }
+        else if (opts.useAlphaExpansion == 2) {
+            gc->swap(numIters);
+            gc->expansion(numIters);
+        }
+        else if (opts.useAlphaExpansion == 3) {
+            gc->expansion(numIters);
+            gc->swap(numIters);
+        }
+        else {
+            // experimental
+            bool progress = true;
+            int iter = 0;
+            const int maxiter = numIters == -1 ? 123456790 : numIters;
+            int oldEnergy = gc->compute_energy();
+
+            while (progress && iter < maxiter) {
+                progress = false;
+                int newEnergy = gc->compute_energy();
+                PRINT_SMGCO("Expansion iter = " << iter << " energy = " << newEnergy)
+                if (newEnergy > oldEnergy) {
+                    PRINT_SMGCO("warning, energy increased")
+                }
+                oldEnergy = newEnergy;
+
+                for (int f = 0; f < FX.rows(); f++) {
+                    const int currentRealLabel = gc->whatLabel(f);
+                    const int currentLabel = currentRealLabel - f * numLables;
+                    int cost = siteLabelCostInt(f, currentLabel);
+                    for (int i = 0; i < 3; i++) {
+                        const int neighf = AdjFX(f, i);
+                        if (neighf == -1) continue;
+                        const int neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
+                        //cost += siteLabelCostInt(neighf, neighLabel);
+                        const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                        cost += smooth;
+                    }
+
+
+
+                    const int numThreads = omp_thread_count();
+                    Eigen::MatrixXi bestLabel(numThreads, 1);
+                    bestLabel.setConstant(-1);
+                    Eigen::MatrixXi bestCost(numThreads, 1);
+                    bestCost.setConstant(cost);
+                    #if defined(_OPENMP)
+                    #pragma omp critical
+                    #endif
+                    for (int l = 0; l < numLables; l++) {
+                        const int threadId = getThreadId();
+                        const int newLabel = l;
+                        const int newRealLabel = l + f * numLables;
+                        int newCost =  siteLabelCostInt(f, newLabel);
+                        for (int i = 0; i < 3; i++) {
+                            const int neighf = AdjFX(f, i);
+                            if (neighf == -1) continue;
+                            const int neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
+                            //newCost += siteLabelCostInt(neighf, neighLabel);
+                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, newRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                            newCost += smooth;
+                        }
+                        if (newCost < bestCost(threadId)) {
+                            bestCost(threadId) = newCost;
+                            bestLabel(threadId) = newRealLabel;
+                        }
+                    }
+
+
+                    int newBestLabel = -1;
+                    int newBestCost = cost;
+                    for (int t = 0; t < numThreads; t++) {
+                        if (bestCost(t) < newBestCost) {
+                            newBestCost = bestCost(t);
+                            newBestLabel = bestLabel(t);
+                        }
+                    }
+                    if (newBestLabel != -1) {
+                        assert(newBestLabel >= ((f) * numLables) && newBestLabel < ((f+1) * numLables));
+                        gc->setLabel(f, newBestLabel);
+                        progress = true;
+                    }
+
+                }
+
+                iter++;
+            }
+
+
+            /* while progress == true
+                    for face in faces
+                        currentlabel = getfacelabel
+                        cost = unaryCost(face, currentlabel)
+                        for neigh in neighbours
+                            if neigh == -1
+                                continue
+                            neighlabel = getneighlabel
+                            cost += getSmooth(face, neigh, currentlabel, neighlabel)
+                            cost += unaryCost(neigh, neighlabel)
+                        // end of energy computation
+
+                        const int numThreads = ompggetnumthreads
+                        newbestcosts = infinit(numthreads)
+                        # parallel
+                        for newLabel in newLabels
+                             threadId = getThreadId
+                             newcost = unaryCost(face, newLabel)
+                             for neigh in neighbours
+                                 if neigh == -1
+                                     continue
+                                 neighlabel = getneighlabel
+                                 newcost += getSmooth(face, neigh, newLabel, neighlabel)
+                                 newcost += unaryCost(neigh, neighlabel)
+                                 if newcost < cost
+                                    newbestcosts(threadId) = newcost
+                                    newbestlabel(threadId) = newLabel
+
+                        updateLabel(face, alpha)
+
+
+
+
+
+
+                    // ------
+
+                    progress = false
+                    energy = getcurrentenergy
+                    minenergey = infinty
+                    old
+                    for each label
+                        gc->setLabel(label)
+                        nowenergy = getcurrentenergy
+                        if nowenergy <
+
+             */
+        }
         GETTIME(t5);
         PRINT_SMGCO("After optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
         PRINT_SMGCO("Optimisation took: " << DURATION_S(t4, t5) << " s");
