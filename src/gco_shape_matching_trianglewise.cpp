@@ -362,11 +362,11 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         else if (opts.algorithm == 0) {
             gc->swap(numIters);
         }
-        else if (opts.useAlphaExpansion == 2) {
+        else if (opts.algorithm == 2) {
             gc->swap(numIters);
             gc->expansion(numIters);
         }
-        else if (opts.useAlphaExpansion == 3) {
+        else if (opts.algorithm == 3) {
             gc->expansion(numIters);
             gc->swap(numIters);
         }
