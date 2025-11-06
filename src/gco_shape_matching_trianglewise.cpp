@@ -120,7 +120,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         if (opts.labelOrder >= 3) {
             siteLabelCost = Eigen::MatrixXf(numVertices * numLables, 1);
         }
-        if (opts.algorithm == 4) {
+        if (opts.algorithm >= 4) {
             siteLabelCostInt = Eigen::MatrixXi(numVertices, numLables);
             siteLabelCostInt.setConstant(-1);
         }
@@ -147,7 +147,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     siteLabelCost(i * numLables + l) = sum;
                 }
                 const int dataCost = (int) (SCALING_FACTOR * opts.unaryWeight * sum);
-                if (opts.algorithm == 4) {
+                if (opts.algorithm >= 4) {
                     siteLabelCostInt(i, l) = dataCost;
                 }
 
@@ -370,7 +370,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             gc->expansion(numIters);
             gc->swap(numIters);
         }
-        else {
+        /*
+         >>>>>>>>>>>>> custom alpha expansion (via line search)
+         */
+        if (opts.algorithm == 4) {
             // experimental
             bool progress = true;
             int iter = 0;
@@ -447,55 +450,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
                 iter++;
             }
-
-
-            /* while progress == true
-                    for face in faces
-                        currentlabel = getfacelabel
-                        cost = unaryCost(face, currentlabel)
-                        for neigh in neighbours
-                            if neigh == -1
-                                continue
-                            neighlabel = getneighlabel
-                            cost += getSmooth(face, neigh, currentlabel, neighlabel)
-                            cost += unaryCost(neigh, neighlabel)
-                        // end of energy computation
-
-                        const int numThreads = ompggetnumthreads
-                        newbestcosts = infinit(numthreads)
-                        # parallel
-                        for newLabel in newLabels
-                             threadId = getThreadId
-                             newcost = unaryCost(face, newLabel)
-                             for neigh in neighbours
-                                 if neigh == -1
-                                     continue
-                                 neighlabel = getneighlabel
-                                 newcost += getSmooth(face, neigh, newLabel, neighlabel)
-                                 newcost += unaryCost(neigh, neighlabel)
-                                 if newcost < cost
-                                    newbestcosts(threadId) = newcost
-                                    newbestlabel(threadId) = newLabel
-
-                        updateLabel(face, alpha)
-
-
-
-
-
-
-                    // ------
-
-                    progress = false
-                    energy = getcurrentenergy
-                    minenergey = infinty
-                    old
-                    for each label
-                        gc->setLabel(label)
-                        nowenergy = getcurrentenergy
-                        if nowenergy <
-
-             */
         }
         GETTIME(t5);
         PRINT_SMGCO("After optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
