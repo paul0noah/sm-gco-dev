@@ -62,6 +62,7 @@ typedef struct GCOTrianglewiseExtra {
     Eigen::MatrixXi lableToIndex;
     Eigen::MatrixXf geoDistY;
     std::unordered_map<std::tuple<GCoptimization::LabelID, GCoptimization::LabelID>, int> cache;
+    std::unordered_map<std::tuple<int, int>, std::tuple<std::tuple<int, int>, std::tuple<int, int>>> sharedVertIds;
     GCOTrianglewiseExtra(TriangleWiseOpts& opts) : opts(opts) {}
 } GCOTrianglewiseExtra;
 
@@ -291,6 +292,12 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     return output;
 }
 
+
+Eigen::MatrixXi getAllNewNeighLabels(const int f,
+                                     const int l,
+                                     const Eigen::MatrixXi& AdjFX,
+                                     const std::vector<std::vector<int>>& vertexInLables,
+                                     const GCOTrianglewiseExtra& extraSmooth);
 
 } // namespace smgco
 

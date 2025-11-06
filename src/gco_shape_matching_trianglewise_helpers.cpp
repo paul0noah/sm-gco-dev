@@ -376,4 +376,94 @@ Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
     return lableSpace;
 }
 
+
+inline std::tuple<int, int, int, int> getTargetVertices(const int f,
+                                              const int adjTri,
+                                              const int l,
+                                              const GCOTrianglewiseExtra& extraSmooth) {
+    if (adjTri == -1) {
+        return std::make_tuple(0, -1, 0, 0);
+    }
+    const std::tuple<int, int> commonVerticesBetweenTriangles = extraSmooth.commonVXofFX(f, adjTri);
+    const int idxX1 = std::get<0>(commonVerticesBetweenTriangles);
+    const int idxX2 = std::get<1>(commonVerticesBetweenTriangles);
+    int colIdx11 = -1, colIdx12 = -1, colIdx21 = -1, colIdx22 = -1;
+    for (int j = 0; j < 3; j++) {
+        if (extraSmooth.FX(f, j) == idxX1) colIdx11 = j;
+        if (extraSmooth.FX(f, j) == idxX2) colIdx12 = j;
+        if (extraSmooth.FX(adjTri, j) == idxX1) colIdx21 = j;
+        if (extraSmooth.FX(adjTri, j) == idxX2) colIdx22 = j;
+    }
+    const int targetVertex1_1 = extraSmooth.LableFY(l, colIdx11);
+    const int targetVertex1_2 = extraSmooth.LableFY(l, colIdx12);
+    return std::make_tuple(targetVertex1_1, targetVertex1_2, colIdx21, colIdx22);
+}
+
+
+
+Eigen::MatrixXi getAllNewNeighLabels(const int f,
+                                     const int l,
+                                     const Eigen::MatrixXi& AdjFX,
+                                     const std::vector<std::vector<int>>& vertexInLables,
+                                     const GCOTrianglewiseExtra& extraSmooth) {
+
+    const int maxReserve = 1000;
+    Eigen::MatrixXi allNewNeighLabels = Eigen::MatrixXi(maxReserve, 3);
+    int numAdded = 0;
+
+    const auto [adj0_targetVertex1_1, adj0_targetVertex1_2, adj0_colIdx21, adj0_colIdx22] = getTargetVertices(f, AdjFX(f, 0), l, extraSmooth);
+    const auto [adj1_targetVertex1_1, adj1_targetVertex1_2, adj1_colIdx21, adj1_colIdx22] = getTargetVertices(f, AdjFX(f, 1), l, extraSmooth);
+    const auto [adj2_targetVertex1_1, adj2_targetVertex1_2, adj2_colIdx21, adj2_colIdx22] = getTargetVertices(f, AdjFX(f, 2), l, extraSmooth);
+
+    const bool adj0NotExistent = adj0_targetVertex1_2 == -1;
+    const bool adj1NotExistent = adj1_targetVertex1_2 == -1;
+    const bool adj2NotExistent = adj2_targetVertex1_2 == -1;
+
+
+    for (const auto& ll_0 : vertexInLables[adj0_targetVertex1_1]) {
+        const int adj0_targetVertex2_1 = extraSmooth.LableFY(ll_0, adj0_colIdx21);
+        const int adj0_targetVertex2_2 = extraSmooth.LableFY(ll_0, adj0_colIdx22);
+        const bool isNeighbouring0 = adj0_targetVertex1_1 == adj0_targetVertex2_1 &&
+                                    adj0_targetVertex1_2 == adj0_targetVertex2_2;
+        if (!isNeighbouring0 && !adj0NotExistent) continue;
+
+        for (const auto& ll_1 : vertexInLables[adj1_targetVertex1_1]) {
+            const int adj1_targetVertex2_1 = extraSmooth.LableFY(ll_1, adj1_colIdx21);
+            const int adj1_targetVertex2_2 = extraSmooth.LableFY(ll_1, adj1_colIdx22);
+            const bool isNeighbouring1 = adj1_targetVertex1_1 == adj1_targetVertex2_1 &&
+                                        adj1_targetVertex1_2 == adj1_targetVertex2_2;
+            if (!isNeighbouring1 && !adj1NotExistent) continue;
+
+
+            for (const auto& ll_2 : vertexInLables[adj2_targetVertex1_1]) {
+                const int adj2_targetVertex2_1 = extraSmooth.LableFY(ll_2, adj0_colIdx21);
+                const int adj2_targetVertex2_2 = extraSmooth.LableFY(ll_2, adj0_colIdx22);
+                const bool isNeighbouring2 = adj2_targetVertex1_1 == adj2_targetVertex2_1 &&
+                                            adj2_targetVertex1_2 == adj2_targetVertex2_2;
+                if (!isNeighbouring2 && !adj2NotExistent) continue;
+
+
+                const int newLabel0 = adj0NotExistent ? -1 : ll_0 + AdjFX(f, 0) * extraSmooth.numLables;
+                const int newLabel1 = adj1NotExistent ? -1 : ll_1 + AdjFX(f, 1) * extraSmooth.numLables;
+                const int newLabel2 = adj2NotExistent ? -1 : ll_2 + AdjFX(f, 2) * extraSmooth.numLables;
+
+                allNewNeighLabels.row(numAdded) << newLabel0, newLabel1, newLabel2;
+                
+                numAdded++;
+                if (numAdded >= maxReserve) {
+                    std::cout << "error, hardcoded memory reservation is too small" << std::endl;
+                    exit(-1);
+                }
+                if (adj2NotExistent) break;
+            }
+            if (adj1NotExistent) break;
+        }
+        if (adj0NotExistent) break;
+
+    }
+
+    allNewNeighLabels.conservativeResize(numAdded, 3);
+    return allNewNeighLabels;
+}
+
 } // namespace smgco
