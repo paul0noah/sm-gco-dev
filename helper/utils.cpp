@@ -280,6 +280,54 @@ std::tuple<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::VectorXi, Eigen::MatrixXi, E
 }
 
 
+Eigen::MatrixXi greedyDualTriGraphColouring(const Eigen::MatrixXi& F) {
+
+    Eigen::MatrixXi ColoursF(F.rows(), 1);
+    Eigen::MatrixXi AdjF;
+    igl::triangle_triangle_adjacency(F, AdjF);
+
+    ColoursF.setConstant(-1);
+    ColoursF(0) = 1; // assign first colour
+
+    std::vector<int> coloured;
+    coloured.reserve(F.rows());
+    coloured.push_back(0);
+
+    int iter = 0;
+    while (coloured.size() < F.rows()) {
+        bool progress = false;
+        const int currentF = coloured.back();
+        for (int i = 0; i < 3; i++) {
+            const int adjF = AdjF(currentF, i);
+            if (adjF == -1)
+                continue;
+            if (ColoursF(adjF) == -1) {
+                ColoursF(adjF) = 1 - ColoursF(currentF);
+                progress = true;
+                coloured.push_back(adjF);
+            }
+        }
+
+        if (!progress) { // there might be disconnected components => set random vertex
+            int nextF = -1;
+            for (int f = 0; f < F.rows(); f++) {
+                if (ColoursF(f) == -1) {
+                    nextF = f;
+                    break;
+                }
+            }
+            ColoursF(nextF) = 0;
+            coloured.push_back(nextF);
+        }
+        iter++;
+        if (iter > F.rows()) {
+            break;
+        }
+    }
+    return ColoursF;
+
+}
+
 } // namespace utils
 
 

@@ -229,6 +229,8 @@ void argsort(const Eigen::MatrixBase<Derived>& v, std::vector<int>& idx) {
     //return idx;
 }
 
+Eigen::MatrixXi greedyDualTriGraphColouring(const Eigen::MatrixXi& F);
+
 } // namespace utils
 
 
