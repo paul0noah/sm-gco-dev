@@ -45,8 +45,8 @@ std::string ALGORITHMS[8] = { "ALPHA-BETA SWAP",
                                 "SWAP followed by EXPANSION",
                                 "EXPANSION followed by SWAP",
                                 "LINESEARCH",
-                                "LINESEARCH + SITE REORDERING (w.r.t. min smooth cost)",
                                 "LINESEARCH + ADAPTIVE",
+                                "LINESEARCH + SITE REORDERING (w.r.t. min smooth cost)",
                                 "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. min smooth cost)"};
 /*
 
