@@ -15,6 +15,7 @@ PYBIND11_MODULE(sm_gco, handle) {
 
 
     handle.def("get_cycle_triangles", &utils::getCycleTriangles);
+    handle.def("tri_bicolouring", &utils::greedyDualTriGraphColouring);
     using namespace smgco;
 
     // how to wrap classes, also easy *_* (every class function has to be defined seperatly tho :/ )
@@ -61,6 +62,10 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("label_order", &TriangleWiseOpts::labelOrder)
             .def_readwrite("same_label_cost", &TriangleWiseOpts::sameLabelCost)
             .def_readwrite("algorithm", &TriangleWiseOpts::algorithm)
+            .def_readwrite("sinkhorn_init_entropy", &TriangleWiseOpts::sinkhornEntropy)
+            .def_readwrite("sinkhorn_init_iters", &TriangleWiseOpts::sinkhornIters)
+            .def_readwrite("sinkhorn_energy_modification", &TriangleWiseOpts::sinkhornIters)
+            .def_readwrite("bicolouring", &TriangleWiseOpts::bicolouring)
             .def_readwrite("glue_solution", &TriangleWiseOpts::glueSolution);
 
 
