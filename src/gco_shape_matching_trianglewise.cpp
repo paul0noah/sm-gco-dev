@@ -113,6 +113,71 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
 
 
+        extraSmooth.sharedVertIds.reserve(2 * AdjFX.rows());
+        std::vector<int> sharedThis;
+        sharedThis.reserve(2);
+        std::vector<int> sharedThat;
+        sharedThat.reserve(2);
+        for (int i = 0; i < FX.rows(); i++) {
+            const Eigen::MatrixXi currentFace = FX.row(i);
+            for (int j = 0; j < 3; j++) {
+                const int neighbouringFaceIndex = AdjFX(i, j);
+                if (neighbouringFaceIndex == -1) continue;
+                const Eigen::MatrixXi neighbouringFace = FX.row(neighbouringFaceIndex);
+                sharedThis.clear();
+                sharedThat.clear();
+
+                for (int k = 0; k < 3; k++) {
+                    for (int l = 0; l < 3; l++) {
+                        if (currentFace(k) == neighbouringFace(l)) {
+                            sharedThis.push_back(k);
+                            sharedThat.push_back(l);
+                        }
+                    }
+                }
+                const std::tuple<int, int> sharedIdsFirst  = std::make_tuple(sharedThis[0], sharedThat[0]);
+                const std::tuple<int, int> sharedIdsSecond = std::make_tuple(sharedThis[1], sharedThat[1]);
+                const std::tuple<int, int> key = std::make_tuple(i, neighbouringFaceIndex);
+                extraSmooth.sharedVertIds.insert({key, std::make_tuple(sharedIdsFirst, sharedIdsSecond)});
+            }
+        }
+
+        Eigen::MatrixXf softP;
+        if (opts.sinkhornEnergyMod || opts.setInitialLables) {
+            softP = perVertexFeatureDifference.cast<float>();
+            const float entropy = opts.sinkhornEntropy < -1e8 ? perVertexFeatureDifference.mean() : opts.sinkhornEntropy;
+            #if defined(_OPENMP)
+            #pragma omp parallel for
+            #endif
+            for (int i = 0; i < softP.rows(); i++) {
+                for (int j = 0; j < softP.cols(); j++) {
+                    softP(i, j) = std::exp(- entropy * softP(i, j)) + 1e-8;
+                }
+            }
+
+            bool converged = false;
+            const int maxIter = opts.sinkhornIters;
+            int iter = 0;
+            while (iter < maxIter) {
+
+                #if defined(_OPENMP)
+                #pragma omp parallel for
+                #endif
+                for (int i = 0; i < softP.rows(); i++) {
+                    softP.row(i) = softP.row(i) / softP.row(i).sum();
+                }
+
+                #if defined(_OPENMP)
+                #pragma omp parallel for
+                #endif
+                for (int j = 0; j < softP.cols(); j++) {
+                    softP.col(j) = softP.col(j) / softP.col(j).sum();
+                }
+
+                iter++;
+            }
+        }
+
 
         GETTIME(t1);
         PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
@@ -134,6 +199,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             siteLabelCostInt = Eigen::MatrixXi(numVertices, numLables);
             siteLabelCostInt.setConstant(-1);
         }
+        const int maxEnergy = perVertexFeatureDifference.maxCoeff();
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
             for (int l = 0; l < numLables; l++) {
@@ -143,7 +209,12 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 const bool isDegnerateAndCareAboutDegenerate = setInitialLables > 1 ? isDegenerate : false;
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
-                    sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
+                    if (opts.sinkhornEnergyMod) {
+                        sum += maxEnergy * (1 - softP(FX(i, j), extraSmooth.LableFY(l, j)));
+                    }
+                    else {
+                        sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
+                    }
                 }
                 sum *= opts.featureFactor;
                 if (sum < minCost && !isDegnerateAndCareAboutDegenerate) {
@@ -190,35 +261,70 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         PRINT_SMGCO(" -> smooth cost done (" << DURATION_S(t2, t3) << " s)");
 
 
+        std::vector<std::vector<int>> vertexInLables;
+        if (setInitialLables >= 3) {
+            // collect lable indexes in which certain vertices of Y appear
+            vertexInLables.reserve(VY.rows());
+            for (int i = 0; i < VY.rows(); i++) {
+                std::vector<int> temp; temp.reserve(400);
+                vertexInLables.push_back(std::move(temp));
+            }
+            for (int l = 0; l < numLables; l++) {
+                for (int j = 0; j < 3; j++) {
+                    const Eigen::Vector3i lable = extraSmooth.LableFY.row(l);
+                    const int vertexIndex = extraSmooth.LableFY(l, j);
+                    if (setInitialLables == 3) {
+                        const bool isDegenerate = lable(0) == lable(1) || lable(0) == lable(2) || lable(1) == lable(2);
+                        if (isDegenerate) continue;
+                    }
+                    vertexInLables[vertexIndex].push_back(l);
+                }
+            }
+        }
 
-        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[setInitialLables] << ", " << setInitialLables);
+
+        const int strIndex = setInitialLables >= 10 ? 5 : setInitialLables;
+        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[strIndex] << ", " << setInitialLables);
         if (setInitialLables) {
-            if (setInitialLables == 1 || setInitialLables == 2) {
+            if (setInitialLables > 10) {
+                srand(setInitialLables);
+                for (int i = 0; i < numVertices; i++) {
+                    int randomLabel = rand() % (numLables + 1);;
+                    gc->setLabel(i, randomLabel + i * numLables);
+                }
+            }
+            else if (setInitialLables == 1 || setInitialLables == 2) {
                 for (int i = 0; i < numVertices; i++) {
                     int minIndex = minLables(i);
                     gc->setLabel(i, minIndex + i * numLables);
                 }
             }
-            else if (setInitialLables >= 3) {
-                // collect lable indexes in which certain vertices of Y appear
-                std::vector<std::vector<int>> vertexInLables;
-                vertexInLables.reserve(VY.rows());
-                for (int i = 0; i < VY.rows(); i++) {
-                    std::vector<int> temp; temp.reserve(400);
-                    vertexInLables.push_back(std::move(temp));
-                }
-                for (int l = 0; l < numLables; l++) {
-                    for (int j = 0; j < 3; j++) {
-                        const Eigen::Vector3i lable = extraSmooth.LableFY.row(l);
-                        const int vertexIndex = extraSmooth.LableFY(l, j);
-                        if (setInitialLables == 3) {
-                            const bool isDegenerate = lable(0) == lable(1) || lable(0) == lable(2) || lable(1) == lable(2);
-                            if (isDegenerate) continue;
+            else if (setInitialLables == 5) {
+
+                #if defined(_OPENMP)
+                #pragma omp parallel for
+                #endif
+                for (int i = 0; i < FX.rows(); i++) {
+                    float bestEnergy = std::numeric_limits<float>::infinity();
+                    for (int l = 0; l < numLables; l++) {
+                        float energy = 0;
+                        for (int j = 0; j < 3; j++) {
+                            const float matchingProbability = softP(FX(i, j), extraSmooth.LableFY(l, j));
+                            energy += 1.0f - matchingProbability;
                         }
-                        vertexInLables[vertexIndex].push_back(l);
+                        if (energy < bestEnergy) {
+                            bestEnergy = energy;
+                            minLables(i) = l;
+                        }
                     }
                 }
 
+                for (int i = 0; i < FX.rows(); i++) {
+                    gc->setLabel(i, minLables(i) + i * numLables);
+                }
+
+            }
+            else if (setInitialLables >= 3) {
                 #if defined(_OPENMP)
                 #pragma omp parallel for
                 #endif
