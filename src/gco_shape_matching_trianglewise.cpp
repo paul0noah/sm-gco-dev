@@ -393,8 +393,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
-            Eigen::MatrixX<bool> trySiteThisIter(FX.rows(), 1);
-            trySiteThisIter.setConstant(true);
             std::vector<int> sortedf(FX.rows());
             for (int i = 0; i < FX.rows(); i++)
                 sortedf[i] = i;
@@ -431,7 +429,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 for (int findex = 0; findex < FX.rows(); findex++) {
                     const int f = sortedf[findex];
 
-                    if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
+                    //if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
                     const int currentRealLabel = gc->whatLabel(f);
                     const int currentLabel = currentRealLabel - f * numLables;
                     int cost = siteLabelCostInt(f, currentLabel);
@@ -498,10 +496,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         gc->setLabel(f, newBestLabel);
                         progress = true;
                     }
-                    if (newBestLabel == currentRealLabel || newBestLabel == -1) {
-                        trySiteThisIter(f) = false; // no progress on this site
-                    }
-
                 }
 
                 GETTIME(t01);
