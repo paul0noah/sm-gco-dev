@@ -389,15 +389,31 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
             while (progress && iter < maxiter) {
                 progress = false;
-                int newEnergy = gc->compute_energy();
-                PRINT_SMGCO("Expansion iter = " << iter << " energy = " << newEnergy)
-                if (newEnergy > oldEnergy) {
-                    PRINT_SMGCO("warning, energy increased")
-                }
-                oldEnergy = newEnergy;
-
+                int successFullExpansions = 0;
+                int numExpansions = 0;
                 int triedNumSites = 0;
 
+                // determine order
+                GETTIME(t00);
+                if (opts.algorithm >= 6) {
+                    Eigen::MatrixXf pairwiseCosts(FX.rows(), 1);
+                    #if defined(_OPENMP)
+                    #pragma omp critical
+                    #endif
+                    for (int f = 0; f < FX.rows(); f++) {
+                        int cost = 0;
+                        const int currentRealLabel = gc->whatLabel(f);
+                        for (int i = 0; i < 3; i++) {
+                            const int neighf = AdjFX(f, i);
+                            if (neighf == -1) continue;
+                            const int neighLabel = gc->whatLabel(neighf);
+                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                            cost += smooth;
+                        }
+                        pairwiseCosts(f) = cost;
+                    }
+                    utils::argsort(pairwiseCosts, sortedf);
+                }
                 for (int findex = 0; findex < FX.rows(); findex++) {
                     const int f = sortedf[findex];
 
@@ -422,10 +438,16 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     bestLabel.setConstant(-1);
                     Eigen::MatrixXi bestCost(numThreads, 1);
                     bestCost.setConstant(cost);
+                    Eigen::MatrixXi successFullExpansionCounter(numThreads, 1);
+                    successFullExpansionCounter.setConstant(0);
+                    Eigen::MatrixXi expansionCounter(numThreads, 1);
+                    expansionCounter.setConstant(0);
                     #if defined(_OPENMP)
                     #pragma omp critical
                     #endif
                     for (int l = 0; l < numLables; l++) {
+                        if ((opts.algorithm == 5 || opts.algorithm == 7) && tryLabelThisIter(f * numLables + l) < tryLabelIndex)
+                            continue; // dont "expand" label
                         const int threadId = getThreadId();
                         const int newLabel = l;
                         const int newRealLabel = l + f * numLables;
@@ -441,7 +463,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         if (newCost < bestCost(threadId)) {
                             bestCost(threadId) = newCost;
                             bestLabel(threadId) = newRealLabel;
+                            tryLabelThisIter(f * numLables + l) = tryLabelIndex + 1; // keep this label for the next (smaller) queue
+                            successFullExpansionCounter(threadId) += 1;
                         }
+                        expansionCounter(threadId) += 1;
                     }
 
                     int newBestLabel = -1;
@@ -451,6 +476,8 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                             newBestCost = bestCost(t);
                             newBestLabel = bestLabel(t);
                         }
+                        successFullExpansions += successFullExpansionCounter(t);
+                        numExpansions += expansionCounter(t);
                     }
                     if (newBestLabel != -1) {
                         assert(newBestLabel >= ((f) * numLables) && newBestLabel < ((f+1) * numLables));
@@ -463,32 +490,31 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
                 }
 
-                // decide if we should try all again or not
-                PRINT_SMGCO("   Tried " << triedNumSites << " sites this iter");
-                if (triedNumSites == 0) {
-                    trySiteThisIter.setConstant(true);
+                GETTIME(t01);
+                assert(progress == successFullExpansions > 0);
+                int newEnergy = gc->compute_energy();
+                PRINT_SMGCO("Expansion iter = " << iter << ";     energy = " << newEnergy
+                            << ";     # expansions = " << numExpansions
+                            << ";     # successfull expansions = " << successFullExpansions
+                            << ";     took = " << DURATION_MS(t00, t01) << "ms");
+                if (newEnergy > oldEnergy) {
+                    PRINT_SMGCO("warning, energy increased")
                 }
+                oldEnergy = newEnergy;
 
-                // determine order
-                if (opts.algorithm >= 6) {
-                    Eigen::MatrixXf pairwiseCosts(FX.rows(), 1);
-                    #if defined(_OPENMP)
-                    #pragma omp critical
-                    #endif
-                    for (int f = 0; f < FX.rows(); f++) {
-                        int cost = 0;
-                        const int currentRealLabel = gc->whatLabel(f);
-                        for (int i = 0; i < 3; i++) {
-                            const int neighf = AdjFX(f, i);
-                            if (neighf == -1) continue;
-                            const int neighLabel = gc->whatLabel(neighf);
-                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
-                            cost += smooth;
-                        }
-                        pairwiseCosts(f) = -cost;
-                    }
-                    utils::argsort(pairwiseCosts, sortedf);
+                // adaptive cycle idea from GCO
+                const bool adaptiveAlgorithm = opts.algorithm == 5 || opts.algorithm == 7;
+                // No expansion was successful, so try more labels from the previous queue
+                if (tryLabelIndex > 0 && adaptiveAlgorithm && successFullExpansions == 0) {
+                    progress = true;
+                    tryLabelIndex--;
                 }
+                // Some expansions were successful, so focus on them in a new queue
+                if (successFullExpansions > 0) tryLabelIndex++;
+                // All expansions were successful, so do another complete sweep
+                if (successFullExpansions == numLables * numVertices) tryLabelIndex++;
+
+
 
 
                 iter++;
