@@ -33,11 +33,21 @@ inline int getThreadId() {
 #endif
 
 namespace smgco {
-std::string INIT_METHODS[5] = { "NO_INIT",
+std::string INIT_METHODS[7] = { "NO_INIT",
                                 "MIN_LABEL",
                                 "MIN_LABEL_NON_DEGENERATE",
                                 "TRI_NEIGHBOURS_NON_DEGENERATE",
-                                "TRI_NEIGHBOURS"};
+                                "TRI_NEIGHBOURS",
+                                "SINKHORN",
+                                "RANDOM"};
+std::string ALGORITHMS[8] = { "ALPHA-BETA SWAP",
+                                "ALPHA EXPANSION",
+                                "SWAP followed by EXPANSION",
+                                "EXPANSION followed by SWAP",
+                                "LINESEARCH",
+                                "LINESEARCH + SITE REORDERING (w.r.t. min smooth cost)",
+                                "LINESEARCH + ADAPTIVE",
+                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. min smooth cost)"};
 /*
 
 
@@ -353,8 +363,9 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
 
 
-
+        PRINT_SMGCO("Using algorithm: " << ALGORITHMS[opts.algorithm]);
         PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
+
         GETTIME(t4);
         if (opts.algorithm == 1) {
             gc->expansion(numIters);
@@ -379,6 +390,9 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             int iter = 0;
             const int maxiter = numIters == -1 ? 123456790 : numIters;
             int oldEnergy = gc->compute_energy();
+            Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
+            tryLabelThisIter.setConstant(0);
+            int tryLabelIndex = 0;
             Eigen::MatrixX<bool> trySiteThisIter(FX.rows(), 1);
             trySiteThisIter.setConstant(true);
             std::vector<int> sortedf(FX.rows());
