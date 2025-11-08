@@ -45,7 +45,7 @@ struct TriangleWiseOpts {
     float sameLabelCost = 0.0;
     int algorithm = true; // 0 = alpha beta swap, 1 = alpha expansion, 4 = custom alpha expansion, 5 = custom alpha expansion with adaptive cycles, 6 = custom alpha expansion with site reordering
     int sinkhornIters = 10;
-    float sinkhornEntropy = 5.0f;
+    float sinkhornEntropy = -1.0f;
     bool sinkhornEnergyMod = false;
     bool bicolouring = false;
 };
