@@ -373,12 +373,19 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         /*
          >>>>>>>>>>>>> custom alpha expansion (via line search)
          */
-        if (opts.algorithm == 4) {
+        else if (opts.algorithm >= 4) {
             // experimental
             bool progress = true;
             int iter = 0;
             const int maxiter = numIters == -1 ? 123456790 : numIters;
             int oldEnergy = gc->compute_energy();
+            Eigen::MatrixX<bool> trySiteThisIter(FX.rows(), 1);
+            trySiteThisIter.setConstant(true);
+            std::vector<int> sortedf(FX.rows());
+            for (int i = 0; i < FX.rows(); i++)
+                sortedf[i] = i;
+
+            std::cout << opts.algorithm << std::endl;
 
             while (progress && iter < maxiter) {
                 progress = false;
@@ -389,7 +396,12 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 }
                 oldEnergy = newEnergy;
 
-                for (int f = 0; f < FX.rows(); f++) {
+                int triedNumSites = 0;
+
+                for (int findex = 0; findex < FX.rows(); findex++) {
+                    const int f = sortedf[findex];
+
+                    if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
                     const int currentRealLabel = gc->whatLabel(f);
                     const int currentLabel = currentRealLabel - f * numLables;
                     int cost = siteLabelCostInt(f, currentLabel);
@@ -401,6 +413,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                         cost += smooth;
                     }
+                    triedNumSites++;
 
 
 
@@ -431,7 +444,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         }
                     }
 
-
                     int newBestLabel = -1;
                     int newBestCost = cost;
                     for (int t = 0; t < numThreads; t++) {
@@ -445,8 +457,39 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         gc->setLabel(f, newBestLabel);
                         progress = true;
                     }
+                    if (newBestLabel == currentRealLabel || newBestLabel == -1) {
+                        trySiteThisIter(f) = false; // no progress on this site
+                    }
 
                 }
+
+                // decide if we should try all again or not
+                PRINT_SMGCO("   Tried " << triedNumSites << " sites this iter");
+                if (triedNumSites == 0) {
+                    trySiteThisIter.setConstant(true);
+                }
+
+                // determine order
+                if (opts.algorithm >= 6) {
+                    Eigen::MatrixXf pairwiseCosts(FX.rows(), 1);
+                    #if defined(_OPENMP)
+                    #pragma omp critical
+                    #endif
+                    for (int f = 0; f < FX.rows(); f++) {
+                        int cost = 0;
+                        const int currentRealLabel = gc->whatLabel(f);
+                        for (int i = 0; i < 3; i++) {
+                            const int neighf = AdjFX(f, i);
+                            if (neighf == -1) continue;
+                            const int neighLabel = gc->whatLabel(neighf);
+                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                            cost += smooth;
+                        }
+                        pairwiseCosts(f) = -cost;
+                    }
+                    utils::argsort(pairwiseCosts, sortedf);
+                }
+
 
                 iter++;
             }
