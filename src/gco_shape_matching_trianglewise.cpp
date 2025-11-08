@@ -178,6 +178,19 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             }
         }
 
+        Eigen::MatrixXi ColourFX(FX.rows(), 1); ColourFX.setZero();
+        int numRed = 0, numBlue = 0;
+        if (opts.bicolouring) {
+            PRINT_SMGCO("  bicolouring is switched to ON");
+            ColourFX = utils::greedyDualTriGraphColouring(FX);
+            for (int i = 0; i < FX.rows(); i++) {
+                if (ColourFX(i))
+                    numRed++;
+                else
+                    numBlue++;
+            }
+        }
+
 
         GETTIME(t1);
         PRINT_SMGCO(" -> helpers done (" << DURATION_S(t0, t1) << " s)");
@@ -500,10 +513,17 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
             std::vector<int> sortedf(FX.rows());
-            for (int i = 0; i < FX.rows(); i++)
-                sortedf[i] = i;
-
-            std::cout << opts.algorithm << std::endl;
+            int redIndex = 0, blueIndex = 0;
+            for (int i = 0; i < FX.rows(); i++) {
+                if (ColourFX(i)) {
+                    sortedf[numBlue + redIndex] = i;
+                    redIndex++;
+                    continue;
+                }
+                sortedf[blueIndex] = i;
+                blueIndex++;
+            }
+            assert(redIndex + blueIndex == FX.rows());
 
             while (progress && iter < maxiter) {
                 progress = false;
@@ -527,6 +547,9 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                             const int neighLabel = gc->whatLabel(neighf);
                             const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                             cost += smooth;
+                        }
+                        if (opts.bicolouring && ColourFX(f)) {
+                            cost = -std::numeric_limits<int>::max() + cost;
                         }
                         pairwiseCosts(f) = cost;
                     }
