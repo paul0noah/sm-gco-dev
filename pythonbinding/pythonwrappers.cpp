@@ -64,7 +64,7 @@ PYBIND11_MODULE(sm_gco, handle) {
             .def_readwrite("algorithm", &TriangleWiseOpts::algorithm)
             .def_readwrite("sinkhorn_init_entropy", &TriangleWiseOpts::sinkhornEntropy)
             .def_readwrite("sinkhorn_init_iters", &TriangleWiseOpts::sinkhornIters)
-            .def_readwrite("sinkhorn_energy_modification", &TriangleWiseOpts::sinkhornIters)
+            .def_readwrite("sinkhorn_energy_modification", &TriangleWiseOpts::sinkhornEnergyMod)
             .def_readwrite("bicolouring", &TriangleWiseOpts::bicolouring)
             .def_readwrite("glue_solution", &TriangleWiseOpts::glueSolution);
 

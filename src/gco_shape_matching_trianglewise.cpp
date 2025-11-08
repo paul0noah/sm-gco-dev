@@ -212,7 +212,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             siteLabelCostInt = Eigen::MatrixXi(numVertices, numLables);
             siteLabelCostInt.setConstant(-1);
         }
-        const int maxEnergy = perVertexFeatureDifference.maxCoeff();
+        const double maxEnergy = perVertexFeatureDifference.maxCoeff();
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
             for (int l = 0; l < numLables; l++) {
