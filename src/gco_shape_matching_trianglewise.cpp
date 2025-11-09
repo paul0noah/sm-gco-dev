@@ -728,6 +728,58 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         for (int i = 0; i < p2p_unique.rows(); i++) {
             perVertexMatches[p2p_unique(i, 0)].push_back(p2p_unique(i, 1));
         }
+        const std::vector<std::vector<int>> originalPerVertexMatches = perVertexMatches;
+
+        // add all vertices in convex hull of existing vertices
+        Eigen::MatrixXf ElenY;
+        Eigen::MatrixXi EY;
+        igl::edge_lengths(VY, FY, ElenY);
+        igl::edges(FY, EY);
+        std::vector<std::vector<int>> vertexEdgeAdjacency(VY.rows());
+        for (int e = 0; e < EY.rows(); e++) {
+            vertexEdgeAdjacency[EY(e, 0)].push_back(e);
+            vertexEdgeAdjacency[EY(e, 1)].push_back(e);
+        }
+        for (int i = 0; i < VX.rows(); i++) {
+            float maxGeodist = 0;
+            float maxEdgeLength = 0;
+            for (const auto& matchedVertex1 : originalPerVertexMatches[i]) {
+                for (const auto& matchedVertex2 : originalPerVertexMatches[i]) {
+                    const float geodist12 = extraSmooth.geoDistY(matchedVertex1, matchedVertex2);
+                    maxGeodist = std::max(geodist12, maxGeodist);
+                }
+                for (const auto e : vertexEdgeAdjacency[matchedVertex1]) {
+                    maxEdgeLength = std::max(maxEdgeLength, ElenY(e));
+                }
+            }
+            maxGeodist += maxEdgeLength;
+
+            // any point on Y that is at most maxGeodist away from any of the original matched points is a viable candidate
+            for (int j = 0; j < VY.rows(); j++) {
+                float maxGeoDistVj = 0;
+                for (const auto& matchedVertex : originalPerVertexMatches[i]) {
+                    maxGeoDistVj = std::max(maxGeoDistVj, extraSmooth.geoDistY(j, matchedVertex));
+                }
+                if (maxGeoDistVj <= maxGeodist) {
+                    perVertexMatches[i].push_back(j);
+                }
+            }
+        }
+
+        int numMatches = 0;
+        for (int i = 0; i < VX.rows(); i++) {
+            numMatches += perVertexMatches[i].size();
+        }
+        p2p_unique.conservativeResize(numMatches, 2);
+        int index = 0;
+        for (int i = 0; i < VX.rows(); i++) {
+            for (const auto& match : perVertexMatches[i]) {
+                p2p_unique.row(index) << i, match;
+                index++;
+            }
+        }
+
+
         for (int i = 0; i < VX.rows(); i++) {
             double bestEnergy = std::numeric_limits<double>::infinity();
             int bestVertex = 0;
