@@ -40,14 +40,16 @@ std::string INIT_METHODS[7] = { "NO_INIT",
                                 "TRI_NEIGHBOURS",
                                 "SINKHORN",
                                 "RANDOM"};
-std::string ALGORITHMS[8] = { "ALPHA-BETA SWAP",
+std::string ALGORITHMS[10] = { "ALPHA-BETA SWAP",
                                 "ALPHA EXPANSION",
                                 "SWAP followed by EXPANSION",
                                 "EXPANSION followed by SWAP",
                                 "LINESEARCH",
                                 "LINESEARCH + ADAPTIVE",
                                 "LINESEARCH + SITE REORDERING (w.r.t. min smooth cost)",
-                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. min smooth cost)"};
+                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. min smooth cost)",
+                                "LINESEARCH + SITE REORDERING (w.r.t. max smooth cost)",
+                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. max smooth cost)"};
 /*
 
 
@@ -548,8 +550,16 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                             const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                             cost += smooth;
                         }
+                        if (opts.algorithm >= 8) {
+                            cost -= cost;
+                        }
                         if (opts.bicolouring && ColourFX(f)) {
-                            cost = -std::numeric_limits<int>::max() + cost;
+                            if (opts.algorithm >= 8) {
+                                cost =  std::numeric_limits<int>::max() + cost;
+                            }
+                            else {
+                                cost = -std::numeric_limits<int>::max() + cost;
+                            }
                         }
                         pairwiseCosts(f) = cost;
                     }
@@ -587,7 +597,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     #pragma omp critical
                     #endif
                     for (int l = 0; l < numLables; l++) {
-                        if ((opts.algorithm == 5 || opts.algorithm == 7) && tryLabelThisIter(f * numLables + l) < tryLabelIndex)
+                        if ((opts.algorithm == 5 || opts.algorithm == 7 || opts.algorithm == 9) && tryLabelThisIter(f * numLables + l) < tryLabelIndex)
                             continue; // dont "expand" label
                         const int threadId = getThreadId();
                         const int newLabel = l;
@@ -640,7 +650,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 oldEnergy = newEnergy;
 
                 // adaptive cycle idea from GCO
-                const bool adaptiveAlgorithm = opts.algorithm == 5 || opts.algorithm == 7;
+                const bool adaptiveAlgorithm = opts.algorithm == 5 || opts.algorithm == 7 || opts.algorithm == 9;
                 // No expansion was successful, so try more labels from the previous queue
                 if (tryLabelIndex > 0 && adaptiveAlgorithm && successFullExpansions == 0) {
                     progress = true;
