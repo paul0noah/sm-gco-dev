@@ -510,7 +510,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             bool progress = true;
             int iter = 0;
             const int maxiter = numIters == -1 ? 123456790 : numIters;
-            int oldEnergy = gc->compute_energy();
+            long long oldEnergy = gc->compute_energy();
             Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
