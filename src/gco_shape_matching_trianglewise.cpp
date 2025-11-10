@@ -571,7 +571,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     //if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
                     const int currentRealLabel = gc->whatLabel(f);
                     const int currentLabel = currentRealLabel - f * numLables;
-                    int cost = siteLabelCostInt(f, currentLabel);
+                    unsigned long long cost = siteLabelCostInt(f, currentLabel);
                     for (int i = 0; i < 3; i++) {
                         const int neighf = AdjFX(f, i);
                         if (neighf == -1) continue;
@@ -587,7 +587,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     const int numThreads = omp_thread_count();
                     Eigen::MatrixXi bestLabel(numThreads, 1);
                     bestLabel.setConstant(-1);
-                    Eigen::MatrixXi bestCost(numThreads, 1);
+                    Eigen::MatrixX<unsigned long long> bestCost(numThreads, 1);
                     bestCost.setConstant(cost);
                     Eigen::MatrixXi successFullExpansionCounter(numThreads, 1);
                     successFullExpansionCounter.setConstant(0);
@@ -602,7 +602,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         const int threadId = getThreadId();
                         const int newLabel = l;
                         const int newRealLabel = l + f * numLables;
-                        int newCost =  siteLabelCostInt(f, newLabel);
+                        unsigned long long newCost = siteLabelCostInt(f, newLabel);
                         for (int i = 0; i < 3; i++) {
                             const int neighf = AdjFX(f, i);
                             if (neighf == -1) continue;
@@ -621,7 +621,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     }
 
                     int newBestLabel = -1;
-                    int newBestCost = cost;
+                    unsigned long long newBestCost = cost;
                     for (int t = 0; t < numThreads; t++) {
                         if (bestCost(t) < newBestCost) {
                             newBestCost = bestCost(t);
@@ -639,7 +639,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
                 GETTIME(t01);
                 assert(progress == successFullExpansions > 0);
-                int newEnergy = gc->compute_energy();
+                long long newEnergy = gc->compute_energy();
                 PRINT_SMGCO("Expansion iter = " << iter << ";     energy = " << newEnergy
                             << ";     # expansions = " << numExpansions
                             << ";     # successfull expansions = " << successFullExpansions
