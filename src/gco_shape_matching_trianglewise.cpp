@@ -33,6 +33,32 @@ inline int getThreadId() {
 #endif
 
 namespace smgco {
+unsigned long long computeEnergy(GCoptimizationGeneralGraph* gc,
+                                 const Eigen::MatrixXi& AdjFX,
+                                 const Eigen::MatrixXi& siteLabelCostInt,
+                                 void* extraData) {
+    unsigned long long cost = 0;
+    const size_t numLables = siteLabelCostInt.cols();
+    const size_t numTris = siteLabelCostInt.rows();
+    for (int findex = 0; findex < numTris; findex++) {
+        const int f = findex;
+        const GCoptimization::LabelID currentRealLabel = gc->whatLabel(f);
+        const GCoptimization::LabelID currentLabel = currentRealLabel - f * numLables;
+        cost += siteLabelCostInt(f, currentLabel);
+        for (int i = 0; i < 3; i++) {
+            const int neighf = AdjFX(f, i);
+            if (neighf == -1) continue;
+            const GCoptimization::LabelID neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
+            cost += siteLabelCostInt(neighf, neighLabel-  neighf * numLables);
+            const long long smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, extraData);
+            cost += smooth;
+        }
+    }
+
+    return cost;
+}
+
+
 std::string INIT_METHODS[7] = { "NO_INIT",
                                 "MIN_LABEL",
                                 "MIN_LABEL_NON_DEGENERATE",
@@ -516,8 +542,8 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
-            std::vector<int> sortedf(FX.rows());
-            int redIndex = 0, blueIndex = 0;
+            std::vector<unsigned int> sortedf(FX.rows());
+            unsigned long redIndex = 0, blueIndex = 0;
             for (int i = 0; i < FX.rows(); i++) {
                 if (ColourFX(i)) {
                     sortedf[numBlue + redIndex] = i;
@@ -531,25 +557,25 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
             while (progress && iter < maxiter) {
                 progress = false;
-                int successFullExpansions = 0;
-                int numExpansions = 0;
-                int triedNumSites = 0;
+                unsigned long successFullExpansions = 0;
+                unsigned long numExpansions = 0;
+                unsigned long triedNumSites = 0;
 
                 // determine order
                 GETTIME(t00);
                 if (opts.algorithm >= 6) {
-                    Eigen::MatrixXf pairwiseCosts(FX.rows(), 1);
+                    Eigen::MatrixX<long long> pairwiseCosts(FX.rows(), 1);
                     #if defined(_OPENMP)
                     #pragma omp critical
                     #endif
-                    for (int f = 0; f < FX.rows(); f++) {
-                        int cost = 0;
-                        const int currentRealLabel = gc->whatLabel(f);
+                    for (unsigned long f = 0; f < FX.rows(); f++) {
+                        long long cost = 0;
+                        const GCoptimization::LabelID currentRealLabel = gc->whatLabel(f);
                         for (int i = 0; i < 3; i++) {
                             const int neighf = AdjFX(f, i);
                             if (neighf == -1) continue;
-                            const int neighLabel = gc->whatLabel(neighf);
-                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                            const GCoptimization::LabelID neighLabel = gc->whatLabel(neighf);
+                            const long long smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                             cost += smooth;
                         }
                         if (opts.algorithm >= 8) {
@@ -557,10 +583,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         }
                         if (opts.bicolouring && ColourFX(f)) {
                             if (opts.algorithm >= 8) {
-                                cost =  std::numeric_limits<int>::max() + cost;
+                                cost =  std::numeric_limits<long long>::max() + cost;
                             }
                             else {
-                                cost = -std::numeric_limits<int>::max() + cost;
+                                cost = -std::numeric_limits<long long>::max() + cost;
                             }
                         }
                         pairwiseCosts(f) = cost;
@@ -571,15 +597,15 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     const int f = sortedf[findex];
 
                     //if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
-                    const int currentRealLabel = gc->whatLabel(f);
-                    const int currentLabel = currentRealLabel - f * numLables;
+                    const GCoptimization::LabelID currentRealLabel = gc->whatLabel(f);
+                    const GCoptimization::LabelID currentLabel = currentRealLabel - f * numLables;
                     unsigned long long cost = siteLabelCostInt(f, currentLabel);
                     for (int i = 0; i < 3; i++) {
                         const int neighf = AdjFX(f, i);
                         if (neighf == -1) continue;
-                        const int neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
+                        const GCoptimization::LabelID neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
                         //cost += siteLabelCostInt(neighf, neighLabel);
-                        const int smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                        const long long smooth = smoothFnGCOSMTrianglewise(f, neighf, currentRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                         cost += smooth;
                     }
                     triedNumSites++;
@@ -587,30 +613,30 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
                     const int numThreads = omp_thread_count();
-                    Eigen::MatrixXi bestLabel(numThreads, 1);
+                    Eigen::MatrixX<GCoptimization::LabelID> bestLabel(numThreads, 1);
                     bestLabel.setConstant(-1);
                     Eigen::MatrixX<unsigned long long> bestCost(numThreads, 1);
                     bestCost.setConstant(cost);
-                    Eigen::MatrixXi successFullExpansionCounter(numThreads, 1);
+                    Eigen::MatrixX<unsigned long> successFullExpansionCounter(numThreads, 1);
                     successFullExpansionCounter.setConstant(0);
-                    Eigen::MatrixXi expansionCounter(numThreads, 1);
+                    Eigen::MatrixX<unsigned long> expansionCounter(numThreads, 1);
                     expansionCounter.setConstant(0);
                     #if defined(_OPENMP)
-                    #pragma omp critical
+                    #pragma omp parallel
                     #endif
-                    for (int l = 0; l < numLables; l++) {
+                    for (GCoptimization::LabelID l = 0; l < numLables; l++) {
                         if ((opts.algorithm == 5 || opts.algorithm == 7 || opts.algorithm == 9) && tryLabelThisIter(f * numLables + l) < tryLabelIndex)
                             continue; // dont "expand" label
                         const int threadId = getThreadId();
-                        const int newLabel = l;
-                        const int newRealLabel = l + f * numLables;
+                        const GCoptimization::LabelID newLabel = l;
+                        const GCoptimization::LabelID newRealLabel = l + f * numLables;
                         unsigned long long newCost = siteLabelCostInt(f, newLabel);
                         for (int i = 0; i < 3; i++) {
                             const int neighf = AdjFX(f, i);
                             if (neighf == -1) continue;
-                            const int neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
+                            const GCoptimization::LabelID neighLabel = gc->whatLabel(neighf);// - neighf * numLables;
                             //newCost += siteLabelCostInt(neighf, neighLabel);
-                            const int smooth = smoothFnGCOSMTrianglewise(f, neighf, newRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
+                            const long long smooth = smoothFnGCOSMTrianglewise(f, neighf, newRealLabel, neighLabel, static_cast<void*>(&extraSmooth));
                             newCost += smooth;
                         }
                         if (newCost < bestCost(threadId)) {
@@ -622,7 +648,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                         expansionCounter(threadId) += 1;
                     }
 
-                    int newBestLabel = -1;
+                    GCoptimization::LabelID newBestLabel = -1;
                     unsigned long long newBestCost = cost;
                     for (int t = 0; t < numThreads; t++) {
                         if (bestCost(t) < newBestCost) {
