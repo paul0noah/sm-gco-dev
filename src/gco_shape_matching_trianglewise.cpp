@@ -66,10 +66,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
     const COST_MODE costMode = opts.costMode;
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
 
-    const int numVertices = FX.rows();
-    int numDegenerate = 0;
+    const unsigned long numVertices = FX.rows();
+    unsigned long numDegenerate = 0;
     extraSmooth.LableFY = buildLableSpace(VY, FY, numDegenerate, opts);
-    const int numLables = extraSmooth.LableFY.rows();
+    const unsigned long numLables = extraSmooth.LableFY.rows();
     extraSmooth.numLables = numLables;
     extraSmooth.VX = VX.cast<float>();
     extraSmooth.FX = FX;

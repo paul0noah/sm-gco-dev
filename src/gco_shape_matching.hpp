@@ -54,7 +54,7 @@ typedef struct GCOTrianglewiseExtra {
     // not all of the below matrices are needed for all cost modes
     float lambda;
     const TriangleWiseOpts& opts;
-    int numLables;
+    unsigned long numLables;
     float robustMinThres;
     Eigen::MatrixXf p2pDeformation;
     Eigen::MatrixXf VX;
