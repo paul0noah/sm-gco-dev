@@ -177,7 +177,7 @@ public:
 #endif
 	typedef Energy<EnergyTermType,EnergyTermType,EnergyType> EnergyT;
 	typedef EnergyT::Var VarID;
-	typedef int LabelID;                     // Type for labels
+	typedef unsigned long LabelID;                     // Type for labels
 	typedef VarID SiteID;                    // Type for sites
 	typedef EnergyTermType (*SmoothCostFn)(SiteID s1, SiteID s2, LabelID l1, LabelID l2);
 	typedef EnergyTermType (*DataCostFn)(SiteID s, LabelID l);

@@ -89,7 +89,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
     float optimisationTime = 0.0f;
     try{
-        const int numFakeLables = FX.rows() * numLables;
+        const unsigned long numFakeLables = FX.rows() * numLables;
         GCoptimizationGeneralGraph *gc = new GCoptimizationGeneralGraph(numVertices, numFakeLables);
         gc->setVerbosity(1);
 
@@ -246,14 +246,16 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 if (opts.algorithm >= 4) {
                     siteLabelCostInt(i, l) = dataCost;
                 }
+                else {
+                    const int fakeLable = i * numLables + l;
+                    const int numSites = 1;
 
-                const int fakeLable = i * numLables + l;
-                const int numSites = 1;
-                GCoptimization::SparseDataCost* c = new GCoptimization::SparseDataCost[numSites];
-                c[0].site = i;
-                c[0].cost = dataCost;
-                gc->setDataCost(fakeLable, c, numSites);
-                delete[] c;
+                    GCoptimization::SparseDataCost* c = new GCoptimization::SparseDataCost[numSites];
+                    c[0].site = i;
+                    c[0].cost = dataCost;
+                    gc->setDataCost(fakeLable, c, numSites);
+                    delete[] c;
+                }
             }
         }
         energy.conservativeResize(0, 0);
@@ -437,7 +439,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
         if (opts.labelOrder == 2 && numDegenerate > 0) {
             PRINT_SMGCO("Degnerate labels ordered last");
-            Eigen::MatrixXi labelOrder(numLables * numVertices, 1);
+            Eigen::MatrixX<GCoptimization::LabelID> labelOrder(numLables * numVertices, 1);
             const int numNonDegenerate = numLables - numDegenerate;
             const int startIndexDegenerate = numVertices * numNonDegenerate;
             #if defined(_OPENMP)
@@ -461,19 +463,19 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
         if (opts.labelOrder == 3) {
             PRINT_SMGCO("Labels ordered according to min cost");
-            std::vector<int> sortedLabels;
+            std::vector<GCoptimization::LabelID> sortedLabels;
             utils::argsort(siteLabelCost, sortedLabels);
             gc->setLabelOrder(sortedLabels.data(), numLables * numVertices);
         }
         if (opts.labelOrder == 4) {
             PRINT_SMGCO("Labels ordered according to alternating min cost");
             const auto siteLabelCostR = siteLabelCost.reshaped<Eigen::RowMajor>(numVertices, numLables); // no copy
-            Eigen::MatrixXi sortedLabels(numVertices * numLables, 1);
+            Eigen::MatrixX<GCoptimization::LabelID> sortedLabels(numVertices * numLables, 1);
             #if defined(_OPENMP)
             #pragma omp parallel
             #endif
             for (int i = 0; i < numVertices; i++) {
-                std::vector<int> sortedLabelsPerSite;
+                std::vector<GCoptimization::LabelID> sortedLabelsPerSite;
                 utils::argsort(siteLabelCostR.row(i), sortedLabelsPerSite);
                 for (int l = 0; l < numLables; l++) {
                     // write such that we have [bestSite0, bestSite1, ...., secondBestSite0, secondBestSite1, ....]

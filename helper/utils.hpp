@@ -216,10 +216,10 @@ typename Derived::Scalar median( const Eigen::DenseBase<Derived>& d ){
 std::tuple<Eigen::MatrixXd, Eigen::MatrixXi, Eigen::VectorXi, Eigen::MatrixXi, Eigen::VectorX<bool>> getSTAR(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F);
 
 
-template <typename Derived>
-void argsort(const Eigen::MatrixBase<Derived>& v, std::vector<int>& idx) {
+template <typename Derived, typename index>
+void argsort(const Eigen::MatrixBase<Derived>& v, std::vector<index>& idx) {
     // indices 0..n-1
-    idx = std::vector<int>(v.size());
+    idx = std::vector<index>(v.size());
     std::iota(idx.begin(), idx.end(), 0);
 
     // sort indices based on comparing values in v
@@ -288,6 +288,14 @@ namespace std {
     };
     template<> struct equal_to<std::tuple<int, int>>{
         constexpr bool operator()(const std::tuple<int, int> &lhs, const std::tuple<int, int> &rhs) const {
+            return (std::get<0>(lhs) == std::get<0>(rhs)) && (std::get<1>(lhs) == std::get<1>(rhs));
+        }
+    };
+    template<> struct hash<std::tuple<unsigned long, unsigned long>> {
+        std::size_t operator()(std::tuple<unsigned long, unsigned long> const& key) const noexcept;
+    };
+    template<> struct equal_to<std::tuple<unsigned long, unsigned long>>{
+        constexpr bool operator()(const std::tuple<unsigned long, unsigned long> &lhs, const std::tuple<unsigned long, unsigned long> &rhs) const {
             return (std::get<0>(lhs) == std::get<0>(rhs)) && (std::get<1>(lhs) == std::get<1>(rhs));
         }
     };
