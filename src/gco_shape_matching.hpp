@@ -288,7 +288,7 @@ GCoptimization::EnergyTermType smoothFnGCOSMTrianglewise(GCoptimization::SiteID 
     diff = opts.smoothWeight * diff;
 
 
-    const int output = (int) (SCALING_FACTOR * diff );
+    const long long output = (long long) (SCALING_FACTOR * diff );
     if (USE_CACHING) {
         extraData->cache.insert({std::make_tuple(std::min(l1, l2), std::max(l1, l2)), output});
     }

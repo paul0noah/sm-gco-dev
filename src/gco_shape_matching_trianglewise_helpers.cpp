@@ -242,7 +242,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         #endif
         for (int x = 0; x < FX.rows(); x++) {
 
-            for (int l = 0; l < lableSpace.rows(); l++) {
+            for (unsigned long l = 0; l < lableSpace.rows(); l++) {
                 const Eigen::Matrix3d pointsX = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsX.row(x), EX0.row(x), EX1.row(x)).finished() :
                 (Eigen::Matrix3d() << NX.row(x), EX0.row(x), EX1.row(x)).finished() ;
                 const Eigen::Matrix3d pointsY = globalTrafo ? (Eigen::Matrix3d() << TriCentroidsY.row(l), EY0.row(l), EY1.row(l)).finished() :

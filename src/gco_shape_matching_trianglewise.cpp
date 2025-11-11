@@ -134,7 +134,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         PRINT_SMGCO("Precomputing helpers...");
         GETTIME(t0);
         extraSmooth.lableToIndex = Eigen::MatrixXi(numFakeLables, 2);
-        for (int lf = 0; lf < numFakeLables; lf++) {
+        for (unsigned long lf = 0; lf < numFakeLables; lf++) {
             const int rowIndex = lf / numLables;
             const int colIndex = lf - rowIndex * numLables;
             extraSmooth.lableToIndex.row(lf) << rowIndex, colIndex ;
@@ -243,7 +243,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         const double maxEnergy = perVertexFeatureDifference.maxCoeff();
         for (int i = 0; i < numVertices; i++) {
             float minCost = std::numeric_limits<float>::infinity();
-            for (int l = 0; l < numLables; l++) {
+            for (unsigned long l = 0; l < numLables; l++) {
                 const bool isDegenerate =   extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 1) ||
                                             extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 2) ||
                                             extraSmooth.LableFY(l, 1) == extraSmooth.LableFY(l, 2);
@@ -312,7 +312,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 std::vector<int> temp; temp.reserve(400);
                 vertexInLables.push_back(std::move(temp));
             }
-            for (int l = 0; l < numLables; l++) {
+            for (unsigned long l = 0; l < numLables; l++) {
                 for (int j = 0; j < 3; j++) {
                     const Eigen::Vector3i lable = extraSmooth.LableFY.row(l);
                     const int vertexIndex = extraSmooth.LableFY(l, j);
@@ -349,7 +349,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 #endif
                 for (int i = 0; i < FX.rows(); i++) {
                     float bestEnergy = std::numeric_limits<float>::infinity();
-                    for (int l = 0; l < numLables; l++) {
+                    for (unsigned long l = 0; l < numLables; l++) {
                         float energy = 0;
                         for (int j = 0; j < 3; j++) {
                             const float matchingProbability = softP(FX(i, j), extraSmooth.LableFY(l, j));
@@ -378,7 +378,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     Eigen::Vector3i adjacentTris = AdjFX.row(i);
 
                     const int iterStart = setInitialLables == 3 ? numDegenerate : 0;
-                    for (int l = iterStart; l < numLables; l++) { // this loop is lable of the center triangle
+                    for (unsigned long l = iterStart; l < numLables; l++) { // this loop is lable of the center triangle
                         double sum = 0;
                         for (int j = 0; j < 3; j++) {
                             sum += perVertexFeatureDifference(FX(i, j), extraSmooth.LableFY(l, j));
@@ -472,7 +472,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             #pragma omp parallel
             #endif
             for (int i = 0; i < numVertices; i++) {
-                for (int l = 0; l < numLables; l++) {
+                for (unsigned long l = 0; l < numLables; l++) {
                     const int currentLabelIndex = i * numLables + l;
                     int newLabelIndex = -1;
                     if (l >= numNonDegenerate) {
@@ -503,7 +503,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             for (int i = 0; i < numVertices; i++) {
                 std::vector<GCoptimization::LabelID> sortedLabelsPerSite;
                 utils::argsort(siteLabelCostR.row(i), sortedLabelsPerSite);
-                for (int l = 0; l < numLables; l++) {
+                for (unsigned long l = 0; l < numLables; l++) {
                     // write such that we have [bestSite0, bestSite1, ...., secondBestSite0, secondBestSite1, ....]
                     sortedLabels(l * numVertices + i) = sortedLabelsPerSite[l] + i * numLables;
                 }
@@ -538,7 +538,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             bool progress = true;
             int iter = 0;
             const int maxiter = numIters == -1 ? 123456790 : numIters;
-            long long oldEnergy = gc->compute_energy();
+            long long oldEnergy = computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth));
             Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
