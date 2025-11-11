@@ -344,8 +344,8 @@ Eigen::MatrixXi buildLableSpace(const Eigen::MatrixXd& VY,
 
 
     const Eigen::MatrixXi cycleTriangles = opts.lableSpaceCycleSize == 3 ? FY : utils::getCycleTriangles(VY, FY, opts.lableSpaceCycleSize, opts.lableSpaceAngleThreshold);
-    const int numCycleTris = cycleTriangles.rows();
-    int lableSpaceSize = 3 * numCycleTris;
+    const unsigned long numCycleTris = cycleTriangles.rows();
+    unsigned long lableSpaceSize = 3 * numCycleTris;
 
     Eigen::MatrixXi degenerateTris;
     numDegenerate = 0;

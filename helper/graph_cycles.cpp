@@ -308,11 +308,11 @@ Eigen::MatrixXi getCycleTriangles(const Eigen::MatrixXd& VX,
     }
     auto cycles = bbc.findCycles();
 
-    const int numCycles = cycles.size();
-    const int maxNumTris = getNumTris(maxCycleLength);
+    const unsigned long numCycles = cycles.size();
+    const unsigned long maxNumTris = getNumTris(maxCycleLength);
     Eigen::MatrixXi cycleTris(numCycles * maxNumTris, 3);
 
-    int index = 0;
+    unsigned long index = 0;
     tsl::robin_set<Eigen::Vector3i> uniqueCycleTris;
     Eigen::Vector3i cycleTri; cycleTri.setConstant(-1);
     uniqueCycleTris.insert(cycleTri);
