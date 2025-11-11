@@ -566,7 +566,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 if (opts.algorithm >= 6) {
                     Eigen::MatrixX<long long> pairwiseCosts(FX.rows(), 1);
                     #if defined(_OPENMP)
-                    #pragma omp critical
+                    //#pragma omp parallel
                     #endif
                     for (unsigned long f = 0; f < FX.rows(); f++) {
                         long long cost = 0;
@@ -595,6 +595,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 }
                 for (int findex = 0; findex < FX.rows(); findex++) {
                     const int f = sortedf[findex];
+                    if (findex % 250 == 0) PRINT_SMGCO("hey " << findex << " " << FX.rows());
 
                     //if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
                     const GCoptimization::LabelID currentRealLabel = gc->whatLabel(f);
@@ -622,7 +623,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                     Eigen::MatrixX<unsigned long> expansionCounter(numThreads, 1);
                     expansionCounter.setConstant(0);
                     #if defined(_OPENMP)
-                    #pragma omp parallel
+                    //#pragma omp parallel
                     #endif
                     for (GCoptimization::LabelID l = 0; l < numLables; l++) {
                         if ((opts.algorithm == 5 || opts.algorithm == 7 || opts.algorithm == 9) && tryLabelThisIter(f * numLables + l) < tryLabelIndex)
