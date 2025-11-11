@@ -595,7 +595,6 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 }
                 for (int findex = 0; findex < FX.rows(); findex++) {
                     const int f = sortedf[findex];
-                    if (findex % 250 == 0) PRINT_SMGCO("hey " << findex << " " << FX.rows());
 
                     //if (!trySiteThisIter(f) && (opts.algorithm == 5 || opts.algorithm == 7)) continue;
                     const GCoptimization::LabelID currentRealLabel = gc->whatLabel(f);
