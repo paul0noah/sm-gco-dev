@@ -513,7 +513,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
         PRINT_SMGCO("Using algorithm: " << ALGORITHMS[opts.algorithm]);
-        PRINT_SMGCO("Before optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
+        PRINT_SMGCO("Before optimization energy is " << computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth)) / SCALING_FACTOR);
 
         GETTIME(t4);
         if (opts.algorithm == 1) {
@@ -667,7 +667,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
                 GETTIME(t01);
                 assert(progress == successFullExpansions > 0);
-                long long newEnergy = gc->compute_energy();
+                long long newEnergy = computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth));
                 PRINT_SMGCO("Expansion iter = " << iter << ";     energy = " << newEnergy
                             << ";     # expansions = " << numExpansions
                             << ";     # successfull expansions = " << successFullExpansions
@@ -696,7 +696,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             }
         }
         GETTIME(t5);
-        PRINT_SMGCO("After optimization energy is " << gc->compute_energy() / SCALING_FACTOR);
+        PRINT_SMGCO("After optimization energy is " << computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth)) / SCALING_FACTOR);
         PRINT_SMGCO("Optimisation took: " << DURATION_S(t4, t5) << " s");
         optimisationTime = DURATION_MS(t4, t5) / 1000.0f;
 
