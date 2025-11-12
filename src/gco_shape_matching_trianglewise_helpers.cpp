@@ -318,6 +318,31 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.robustMinThres = 2 * L.mean();
     }
     else if (extraData.opts.robustCost == 7) {
+        /*  1000 faces
+            thresh = 0.16
+             2 * mean L = 0.09
+             2 * min L = 0.05
+
+            5000 faces
+            thresh 0.16
+             2 * mean L  0.04
+             2 * min L  0.01
+
+            10000 faces
+            thresh 0.17
+             2 * mean L  0.0286729
+             2 *  min L  0.004
+
+         */
+        Eigen::MatrixXf L;
+        igl::edge_lengths(VY, FY, L);
+        const float geoDistFactor = FX.rows() / 1000.0;
+        extraData.geoDistY *= geoDistFactor;
+        extraData.robustMinThres = geoDistFactor * 8 * L.minCoeff();
+        extraData.newSlope = 0.001f / geoDistFactor;
+    }
+    else if (extraData.opts.robustCost == 8) {
+        // auto mode
         Eigen::MatrixXf L;
         igl::edge_lengths(VY, FY, L);
         extraData.robustMinThres = 2 * L.maxCoeff();
