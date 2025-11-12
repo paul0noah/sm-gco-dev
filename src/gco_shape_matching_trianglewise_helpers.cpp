@@ -317,7 +317,8 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         igl::edge_lengths(VY, FY, L);
         extraData.robustMinThres = 2 * L.mean();
     }
-    else if (extraData.opts.robustCost == 7) {
+    else if (extraData.opts.robustCost == 8) {
+        // auto mode
         /*  1000 faces
             thresh = 0.16
              2 * mean L = 0.09
@@ -341,8 +342,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
         extraData.robustMinThres = geoDistFactor * 8 * L.minCoeff();
         extraData.newSlope = 0.001f / geoDistFactor;
     }
-    else if (extraData.opts.robustCost == 8) {
-        // auto mode
+    else if (extraData.opts.robustCost == 7) {
         Eigen::MatrixXf L;
         igl::edge_lengths(VY, FY, L);
         extraData.robustMinThres = 2 * L.maxCoeff();
