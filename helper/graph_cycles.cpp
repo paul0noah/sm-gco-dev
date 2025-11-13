@@ -423,7 +423,7 @@ Eigen::MatrixXi getDegenerateTriangles(const Eigen::MatrixXi& F) {
     const int numDegenerateTriangles = numVerts + 6 * numEdges;
 
     Eigen::MatrixXi degenerateTris(numDegenerateTriangles, 3);
-    int numTrisAdded = 0;
+    unsigned long numTrisAdded = 0;
 
     for (int i = 0; i < numVerts; i++) {
         degenerateTris.row(numTrisAdded) << i, i, i;
