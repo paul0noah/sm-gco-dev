@@ -542,7 +542,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             Eigen::MatrixXi tryLabelThisIter(numLables * FX.rows(), 1);
             tryLabelThisIter.setConstant(0);
             int tryLabelIndex = 0;
-            std::vector<unsigned int> sortedf(FX.rows());
+            std::vector<unsigned long> sortedf(FX.rows());
             unsigned long redIndex = 0, blueIndex = 0;
             for (int i = 0; i < FX.rows(); i++) {
                 if (ColourFX(i)) {
