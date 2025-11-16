@@ -16,6 +16,8 @@ PYBIND11_MODULE(sm_gco, handle) {
 
     handle.def("get_cycle_triangles", &utils::getCycleTriangles);
     handle.def("tri_bicolouring", &utils::greedyDualTriGraphColouring);
+    handle.def("geodist_knn", &utils::geodistknnsearch);
+
     using namespace smgco;
 
     // how to wrap classes, also easy *_* (every class function has to be defined seperatly tho :/ )

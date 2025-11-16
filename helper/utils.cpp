@@ -391,12 +391,16 @@ template void knnsearch<float, int>(const Eigen::MatrixXf& P1, const Eigen::Matr
 Eigen::MatrixXi geodistknnsearch(const Eigen::MatrixXi& QueryIdxInV,
                                  const Eigen::MatrixXd& V,
                                  const Eigen::MatrixXi& F,
+                                 Eigen::MatrixXf& GeoDistIn,
+                                 const float geodistThresh,
                                  const int k) {
     Eigen::MatrixXi IDX(QueryIdxInV.size(), k);
-    Eigen::MatrixXf GeoDist = computeGeodistMatrix(V, F);
+    if (GeoDistIn.rows() == 0) {
+        GeoDistIn = computeGeodistMatrix(V, F);
+    }
 
 
-    const float maxGeoDist = 0.1 * GeoDist.maxCoeff();
+    const float maxGeoDist = geodistThresh * GeoDistIn.maxCoeff();
     /*
     #if defined(_OPENMP)
     #pragma omp parallel for
@@ -423,7 +427,7 @@ Eigen::MatrixXi geodistknnsearch(const Eigen::MatrixXi& QueryIdxInV,
     return IDX;*/
 
 
-
+    Eigen::MatrixXf GeoDist = GeoDistIn;
     for (int i = 0; i < GeoDist.rows(); i++) {
         for (int j = 0; j < GeoDist.cols(); j++) {
             if (GeoDist(i, j) > maxGeoDist) {
