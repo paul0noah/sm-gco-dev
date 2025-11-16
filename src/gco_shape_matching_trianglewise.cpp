@@ -197,23 +197,29 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
             const int maxIter = opts.sinkhornIters;
             int iter = 0;
             while (iter < maxIter) {
-
                 #if defined(_OPENMP)
-                #pragma omp parallel for
-                #endif
-                for (int i = 0; i < softP.rows(); i++) {
-                    softP.row(i) = softP.row(i) / softP.row(i).sum();
-                }
-
-                #if defined(_OPENMP)
-                #pragma omp parallel for
+                //#pragma omp parallel for
                 #endif
                 for (int j = 0; j < softP.cols(); j++) {
                     softP.col(j) = softP.col(j) / softP.col(j).sum();
                 }
 
+
+                #if defined(_OPENMP)
+                //#pragma omp parallel for
+                #endif
+                for (int i = 0; i < softP.rows(); i++) {
+                    softP.row(i) = softP.row(i) / softP.row(i).sum();
+                }
+
                 iter++;
             }
+
+
+            for (int i = 0; i < softP.rows(); i++) {
+                softP.row(i) = softP.row(i) / softP.row(i).maxCoeff();
+            }
+
         }
 
         Eigen::MatrixXi ColourFX(FX.rows(), 1); ColourFX.setZero();
