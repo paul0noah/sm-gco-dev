@@ -23,6 +23,11 @@ VX(VX_), FX(FX), VY(VY_), FY(FY), perVertexFeatureDifference(perVertexFeatureDif
 
 }
 
+
+void GCOSM::updatePrefix(const std::string& newprefix) {
+    prefix = newprefix;
+}
+
 void GCOSM::printName() {
     std::cout << prefix << std::endl;
 }

@@ -91,6 +91,7 @@ class GCOSM {
           const Eigen::MatrixXi FY,
           const Eigen::MatrixXd perVertexFeatureDifference);
     void printName();
+    void updatePrefix(const std::string& newprefix);
 
     Eigen::MatrixXi pointWise(const bool smoothGeodesic=false);
     std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi> triangleWise(TriangleWiseOpts opts);
