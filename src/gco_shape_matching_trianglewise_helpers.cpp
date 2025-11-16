@@ -1,7 +1,7 @@
 #include "gco_shape_matching.hpp"
 #include <igl/edges.h>
 #include <igl/triangle_triangle_adjacency.h>
-#include <igl/exact_geodesic.h>
+
 #include <igl/unique_rows.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/barycenter.h>
@@ -15,32 +15,7 @@
 
 namespace smgco {
 
-Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
-                                     const Eigen::MatrixXi& FY) {
-    Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
-    #if defined(_OPENMP)
-    #pragma omp parallel for
-    #else
-    Eigen::VectorXi VYsource, FS, VYTarget, FT;
-    // all vertices are source, and all are targets
-    VYsource.resize(1);
-    VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
-    Eigen::VectorXf d;
-    #endif
-    for (int i = 0; i < (int)VY.rows(); i++) {
-        #if defined(_OPENMP)
-        Eigen::VectorXi VYsource, FS, VYTarget, FT;
-        // all vertices are source, and all are targets
-        VYsource.resize(1);
-        VYTarget.setLinSpaced(VY.rows(), 0, (int)VY.rows());
-        Eigen::VectorXf d;
-        #endif
-        VYsource(0) = i;
-        igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
-        geoDistY.col(i) = d;
-    }
-    return geoDistY;
-}
+
 
 Eigen::MatrixXf computeL2DistMatrix(const Eigen::MatrixXd& VY,
                                     const Eigen::MatrixXi& FY) {
@@ -67,7 +42,7 @@ Eigen::MatrixXi glueResult(const Eigen::MatrixXi& FYresult,
                            const Eigen::MatrixXi& FY,
                            const Eigen::MatrixXf& geoDistY) {
     const bool geodistGiven = geoDistY.rows() != 0;
-    const Eigen::MatrixXf geoDistMatYInternal = geodistGiven ? geoDistY : computeGeodistMatrix(VY, FY);
+    const Eigen::MatrixXf geoDistMatYInternal = geodistGiven ? geoDistY : utils::computeGeodistMatrix(VY, FY);
     assert(FYresult.cols() == 3);
     assert(FX.rows() == FYresult.rows());
 
@@ -299,7 +274,7 @@ void precomputeSmoothCost(const Eigen::MatrixXd& VX,
 
     }
     if (costMode == MULTIPLE_LABLE_SPACE_GEODIST || costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
-        extraData.geoDistY = computeGeodistMatrix(VY, FY);
+        extraData.geoDistY = utils::computeGeodistMatrix(VY, FY);
     }
     if (costMode == MULTIPLE_LABLE_SPACE_L2DIST || costMode == MULTIPLE_LABLE_SPACE_L2DIST_MAX || costMode == MULTIPLE_LABLE_SPACE_GEODIST_SO3) {
         extraData.geoDistY = computeL2DistMatrix(VY, FY);

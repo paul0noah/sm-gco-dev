@@ -231,6 +231,24 @@ void argsort(const Eigen::MatrixBase<Derived>& v, std::vector<index>& idx) {
 
 Eigen::MatrixXi greedyDualTriGraphColouring(const Eigen::MatrixXi& F);
 
+Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
+                                     const Eigen::MatrixXi& FY);
+
+template <
+  typename DerivedP,
+  typename DerivedI>
+void knnsearch(const Eigen::MatrixX<DerivedP>& P1,
+               const Eigen::MatrixX<DerivedP>& P2,
+               Eigen::MatrixX<DerivedI>& I,
+               const int k=1);
+
+
+Eigen::MatrixXi geodistknnsearch(const Eigen::MatrixXi& QueryIdxInV,
+                                 const Eigen::MatrixXd& V,
+                                 const Eigen::MatrixXi& F,
+                                 const int k);
+
+
 } // namespace utils
 
 

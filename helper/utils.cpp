@@ -12,8 +12,14 @@
 #include <igl/per_vertex_normals.h>
 #include <igl/repmat.h>
 #include <igl/upsample.h>
+#include <igl/knn.h>
+#include <igl/octree.h>
 #include <igl/boundary_loop.h>
 #include <igl/boundary_facets.h>
+#include <igl/exact_geodesic.h>
+#if defined(_OPENMP)
+    #include <omp.h>
+#endif
 
 namespace utils {
 
@@ -326,6 +332,117 @@ Eigen::MatrixXi greedyDualTriGraphColouring(const Eigen::MatrixXi& F) {
     }
     return ColoursF;
 
+}
+
+
+Eigen::MatrixXf computeGeodistMatrix(const Eigen::MatrixXd& VY,
+                                     const Eigen::MatrixXi& FY) {
+    Eigen::MatrixXf geoDistY(VY.rows(), VY.rows());
+    #if defined(_OPENMP)
+    #pragma omp parallel for
+    #else
+    Eigen::VectorXi VYsource, FS, VYTarget, FT;
+    // all vertices are source, and all are targets
+    VYsource.resize(1);
+    VYTarget.setLinSpaced(VY.rows(), 0, VY.rows());
+    Eigen::VectorXf d;
+    #endif
+    for (int i = 0; i < (int)VY.rows(); i++) {
+        #if defined(_OPENMP)
+        Eigen::VectorXi VYsource, FS, VYTarget, FT;
+        // all vertices are source, and all are targets
+        VYsource.resize(1);
+        VYTarget.setLinSpaced(VY.rows(), 0, (int)VY.rows());
+        Eigen::VectorXf d;
+        #endif
+        VYsource(0) = i;
+        igl::exact_geodesic(VY, FY, VYsource, FS, VYTarget, FT, d);
+        geoDistY.col(i) = d;
+    }
+    return geoDistY;
+}
+
+
+template <
+  typename DerivedP,
+  typename DerivedI>
+void knnsearch(const Eigen::MatrixX<DerivedP>& queryP,
+               const Eigen::MatrixX<DerivedP>& Points,
+               Eigen::MatrixX<DerivedI>& I,
+               const int k) {
+    //Build octree
+    std::vector<std::vector<DerivedI>> point_indices;
+    Eigen::MatrixX<DerivedI> CH;
+    Eigen::MatrixX<DerivedP> CN;
+    Eigen::VectorX<DerivedP> W;
+
+    igl::octree(Points, point_indices, CH, CN, W);
+    Eigen::MatrixXi II;
+    igl::knn(queryP, Points, k, point_indices, CH, CN, W, II);
+    I = II.cast<DerivedI>();
+}
+template void knnsearch<double, int>(const Eigen::MatrixXd& P1, const Eigen::MatrixXd& P2, Eigen::MatrixXi& I, const int k);
+template void knnsearch<float, size_t>(const Eigen::MatrixXf& P1, const Eigen::MatrixXf& P2, Eigen::MatrixX<size_t>& I, const int k);
+template void knnsearch<double, size_t>(const Eigen::MatrixXd& P1, const Eigen::MatrixXd& P2, Eigen::MatrixX<size_t>& I, const int k);
+template void knnsearch<float, int>(const Eigen::MatrixXf& P1, const Eigen::MatrixXf& P2, Eigen::MatrixXi& I, const int k);
+
+
+
+Eigen::MatrixXi geodistknnsearch(const Eigen::MatrixXi& QueryIdxInV,
+                                 const Eigen::MatrixXd& V,
+                                 const Eigen::MatrixXi& F,
+                                 const int k) {
+    Eigen::MatrixXi IDX(QueryIdxInV.size(), k);
+    Eigen::MatrixXf GeoDist = computeGeodistMatrix(V, F);
+
+
+    const float maxGeoDist = 0.1 * GeoDist.maxCoeff();
+    /*
+    #if defined(_OPENMP)
+    #pragma omp parallel for
+    #endif
+    for (int i = 0; i < QueryIdxInV.size(); i++) {
+        const int queryIdx = QueryIdxInV(i, 0);
+        Eigen::VectorXi ringVertices(GeoDist.rows());
+        int idx = 0;
+        for (int j = 0; j < GeoDist.rows(); j++) {
+            if (GeoDist(queryIdx, j) < maxGeoDist) {
+                ringVertices(idx) = j;
+                idx++;
+            }
+        }
+        ringVertices.conservativeResize(idx);
+
+        const Eigen::MatrixXf Database = GeoDist(Eigen::all, ringVertices);
+        const Eigen::MatrixXf Query = GeoDist(queryIdx, ringVertices);
+
+        knnsearch(Query, GeoDist, IDX, k);
+
+        IDX.row(i) = IDX.row(0);
+    }
+    return IDX;*/
+
+
+
+    for (int i = 0; i < GeoDist.rows(); i++) {
+        for (int j = 0; j < GeoDist.cols(); j++) {
+            if (GeoDist(i, j) > maxGeoDist) {
+                GeoDist(i, j) = maxGeoDist;
+            }
+        }
+    }
+
+
+    Eigen::VectorXi query(QueryIdxInV.size());
+    for (int i = 0; i < query.rows(); i++) {
+        query(i) = QueryIdxInV(i);
+    }
+
+    Eigen::MatrixXf q = GeoDist(query, Eigen::all);
+
+    knnsearch(q, GeoDist, IDX, k);
+
+    return IDX;
 }
 
 } // namespace utils
