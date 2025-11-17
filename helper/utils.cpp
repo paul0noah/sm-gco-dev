@@ -388,7 +388,7 @@ void knnsearch(const Eigen::MatrixX<DerivedP>& queryP,
     else {
         const Eigen::MatrixXd P = Points.template cast<double>().transpose();
         knncpp::KDTreeMinkowskiX<double, knncpp::EuclideanDistance<double>> kdtree(P);
-        kdtree.setThreads(-1); // automatic
+        kdtree.setThreads(1); // automatic
         // Set the bucket size for each leaf node in the tree. The higher the value
         // the less leafs have to be visited to find the nearest neighbors. The
         // lower the value the less distance evaluations have to be computed.
