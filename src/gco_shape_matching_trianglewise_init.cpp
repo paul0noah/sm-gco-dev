@@ -137,12 +137,16 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
             const auto out = smGCO.triangleWise(optsCopy);
             Eigen::MatrixXi p2plr = std::get<1>(out);
             std::cout << "p2plr.shape " << p2plr.rows() << ", "<< p2plr.cols() << std::endl;
+            std::cout << "p2plr.max " << p2plr.colwise().maxCoeff() << std::endl;
+            std::cout << "X_lr_2_hr.shape " << X_lr_2_hr.rows() << ", "<< X_lr_2_hr.cols() << std::endl;
+            std::cout << "Y_lr_2_hr.shape " << Y_lr_2_hr.rows() << ", "<< Y_lr_2_hr.cols() << std::endl;
             Eigen::MatrixXi p2phr = p2plr;
             for (int i = 0; i < p2phr.rows(); i++) {
                 p2phr.row(i) << X_lr_2_hr(p2plr(i, 0)), Y_lr_2_hr(p2plr(i, 1));
             }
 
 
+            std::cout << "p2p upscaling done" << std::endl;
 
 
             Eigen::MatrixXf GeoDistXFeat = GeoDistX(Eigen::all, X_lr_2_hr.col(0));
