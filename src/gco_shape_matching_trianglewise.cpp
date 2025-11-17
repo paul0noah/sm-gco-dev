@@ -14,16 +14,6 @@
 namespace smgco {
 
 
-std::string ALGORITHMS[10] = { "ALPHA-BETA SWAP",
-                                "ALPHA EXPANSION",
-                                "SWAP followed by EXPANSION",
-                                "EXPANSION followed by SWAP",
-                                "LINESEARCH",
-                                "LINESEARCH + ADAPTIVE",
-                                "LINESEARCH + SITE REORDERING (w.r.t. min smooth cost)",
-                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. min smooth cost)",
-                                "LINESEARCH + SITE REORDERING (w.r.t. max smooth cost)",
-                                "LINESEARCH + ADAPTIVE + SITE REORDERING (w.r.t. max smooth cost)"};
 /*
 
 
@@ -264,9 +254,26 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
 
-        const int strIndex = opts.setInitialLables >= 10 ? 7 : opts.setInitialLables;
-        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[strIndex] << ", " << opts.setInitialLables);
+        
+        PRINT_SMGCO("Setting initial lables");
         triangleWiseInit(opts, extraSmooth, gc, AdjFX, minLables, softP, numDegenerate);
+        GETTIME(t44);
+        PRINT_SMGCO(" -> init lables done (" << DURATION_S(t3, t44) << " s)");
+
+        // delete
+        if (false && opts.setInitialLables >= 6) {
+            std::cout << "export start" << std::endl;
+            Eigen::MatrixXi t(FX.rows(), 3);
+            std::cout << minLables.rows() << ", " << minLables.cols() << std::endl;
+            for (int f = 0; f < FX.rows(); f++) {
+                t.row(f) << minLables(FX(f, 0), 1), minLables(FX(f, 1), 1), minLables(FX(f, 2), 1);
+            }
+            std::cout << "export" << std::endl;
+            return std::make_tuple(0.0, minLables, t, minLables, t);
+        }
+
+        // end delete
+
 
         if (opts.labelOrder == 1) {
             PRINT_SMGCO("Random label order");

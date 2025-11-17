@@ -14,6 +14,17 @@
 
 namespace smgco {
 
+std::string INIT_METHODS[9] = { "NO_INIT",
+                                "MIN_LABEL",
+                                "MIN_LABEL_NON_DEGENERATE",
+                                "TRI_NEIGHBOURS_NON_DEGENERATE",
+                                "TRI_NEIGHBOURS",
+                                "SINKHORN",
+                                "LOWRES_DECIMATE",
+                                "LOWRES_QSLIM",
+                                "RANDOM"};
+
+
 void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                              GCOTrianglewiseExtra& extraSmooth,
                              GCoptimizationGeneralGraph *gc,
@@ -25,7 +36,8 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
     const int numLables = extraSmooth.LableFY.rows();
     const int setInitialLables = opts.setInitialLables;
 
-    GETTIME(t3);
+    const int strIndex = opts.setInitialLables >= 10 ? 7 : opts.setInitialLables;
+    PRINT_SMGCO("Using mode " << INIT_METHODS[strIndex] << ", " << opts.setInitialLables);
     std::vector<std::vector<int>> vertexInLables;
     if (setInitialLables >= 3) {
         // collect lable indexes in which certain vertices of Y appear
@@ -479,8 +491,7 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
             PRINT_SMGCO("Init mode not supported :( I will not init -> this could cause bad resaults");
         }
 
-        GETTIME(t4);
-        PRINT_SMGCO(" -> init lables done (" << DURATION_S(t3, t4) << " s)");
+       
     }
 }
 
