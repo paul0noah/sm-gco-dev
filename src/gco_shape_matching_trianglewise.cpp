@@ -45,12 +45,11 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
     const int numFacesThreshold = 1200;
     if (opts.setInitialLables == 6 && FX.rows() < numFacesThreshold && FY.rows() < numFacesThreshold){
-        PRINT_SMGCO("Changing init mode to 4 since number of faces is too small");
+        PRINT_SMGCO("WARNING: Changing init mode to 4 since number of faces is too small");
         opts.setInitialLables = 4;
     }
 
     GCOTrianglewiseExtra extraSmooth(opts);
-    const int setInitialLables = opts.setInitialLables;
 
     const COST_MODE costMode = opts.costMode;
     std::cout << prefix << "Using cost mode = " << costMode << std::endl;
@@ -216,7 +215,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 const bool isDegenerate =   extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 1) ||
                                             extraSmooth.LableFY(l, 0) == extraSmooth.LableFY(l, 2) ||
                                             extraSmooth.LableFY(l, 1) == extraSmooth.LableFY(l, 2);
-                const bool isDegnerateAndCareAboutDegenerate = setInitialLables > 1 ? isDegenerate : false;
+                const bool isDegnerateAndCareAboutDegenerate = opts.setInitialLables > 1 ? isDegenerate : false;
                 double sum = 0;
                 for (int j = 0; j < 3; j++) {
                     if (opts.sinkhornEnergyMod) {
@@ -274,8 +273,8 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
 
 
-        const int strIndex = setInitialLables >= 10 ? 7 : setInitialLables;
-        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[strIndex] << ", " << setInitialLables);
+        const int strIndex = opts.setInitialLables >= 10 ? 7 : opts.setInitialLables;
+        PRINT_SMGCO("Setting initial lables in mode " << INIT_METHODS[strIndex] << ", " << opts.setInitialLables);
         triangleWiseInit(opts, extraSmooth, gc, AdjFX, minLables, softP, numDegenerate);
 
         if (opts.labelOrder == 1) {
