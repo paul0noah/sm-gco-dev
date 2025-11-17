@@ -1208,7 +1208,6 @@ namespace knncpp
             if(nodes_.size() == 0)
                 throw std::runtime_error("cannot query KDTree; not built yet");
 
-            std::cout << " --- " << queryPoints.rows() << ", " << queryPoints.cols() << ", " << dimension() << ", " << size()  << std::endl;
             if(queryPoints.rows() != dimension())
                 throw std::runtime_error("cannot query KDTree; data and query points do not have same dimension");
 
