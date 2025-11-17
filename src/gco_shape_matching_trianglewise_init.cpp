@@ -121,32 +121,25 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
             Eigen::MatrixXd featDifflr(VXlr.rows(), VYlr.rows());
             for (int i = 0; i < VXlr.rows(); i++) {
                 for (int j = 0; j < VYlr.rows(); j++) {
-                    featDifflr(i, j) = 0.9 * perVertexFeatureDifference(X_lr_2_hr(i, 0), Y_lr_2_hr(j, 0));
+                    featDifflr(i, j) = 0.5 * perVertexFeatureDifference(X_lr_2_hr(i, 0), Y_lr_2_hr(j, 0));
                     for (int n = 1; n < nn; n++) {
-                        featDifflr(i, j) += 0.01 * perVertexFeatureDifference(X_lr_2_hr(i, n), Y_lr_2_hr(j, n));;
+                        featDifflr(i, j) += 0.05 * perVertexFeatureDifference(X_lr_2_hr(i, n), Y_lr_2_hr(j, n));;
                     }
 
                 }
             }
-            X_lr_2_hr = X_lr_2_hr.col(0);
-            Y_lr_2_hr = Y_lr_2_hr.col(0);
+            X_lr_2_hr.conservativeResize(X_lr_2_hr.rows(), 1);
+            Y_lr_2_hr.conservativeResize(Y_lr_2_hr.rows(), 1);
             GCOSM smGCO(VXlr, FXlr, VYlr, FYlr, featDifflr);
             smGCO.updatePrefix("[GCOSM - INIT] ");
             TriangleWiseOpts optsCopy = opts;
             optsCopy.setInitialLables = 4;
             const auto out = smGCO.triangleWise(optsCopy);
             Eigen::MatrixXi p2plr = std::get<1>(out);
-            std::cout << "p2plr.shape " << p2plr.rows() << ", "<< p2plr.cols() << std::endl;
-            std::cout << "p2plr.max " << p2plr.colwise().maxCoeff() << std::endl;
-            std::cout << "X_lr_2_hr.shape " << X_lr_2_hr.rows() << ", "<< X_lr_2_hr.cols() << std::endl;
-            std::cout << "Y_lr_2_hr.shape " << Y_lr_2_hr.rows() << ", "<< Y_lr_2_hr.cols() << std::endl;
             Eigen::MatrixXi p2phr = p2plr;
             for (int i = 0; i < p2phr.rows(); i++) {
                 p2phr.row(i) << X_lr_2_hr(p2plr(i, 0)), Y_lr_2_hr(p2plr(i, 1));
             }
-
-
-            std::cout << "p2p upscaling done" << std::endl;
 
 
             Eigen::MatrixXf GeoDistXFeat = GeoDistX(Eigen::all, X_lr_2_hr.col(0));
