@@ -17,6 +17,7 @@
 #include <igl/boundary_loop.h>
 #include <igl/boundary_facets.h>
 #include <igl/exact_geodesic.h>
+#include "helper/knncpp.h"
 #if defined(_OPENMP)
     #include <omp.h>
 #endif
@@ -370,16 +371,37 @@ void knnsearch(const Eigen::MatrixX<DerivedP>& queryP,
                const Eigen::MatrixX<DerivedP>& Points,
                Eigen::MatrixX<DerivedI>& I,
                const int k) {
-    //Build octree
-    std::vector<std::vector<DerivedI>> point_indices;
-    Eigen::MatrixX<DerivedI> CH;
-    Eigen::MatrixX<DerivedP> CN;
-    Eigen::VectorX<DerivedP> W;
 
-    igl::octree(Points, point_indices, CH, CN, W);
-    Eigen::MatrixXi II;
-    igl::knn(queryP, Points, k, point_indices, CH, CN, W, II);
-    I = II.cast<DerivedI>();
+    if (Points.cols() == 3 && false) {
+        //Build octree
+        std::vector<std::vector<DerivedI>> point_indices;
+        Eigen::MatrixX<DerivedI> CH;
+        Eigen::MatrixX<DerivedP> CN;
+        Eigen::VectorX<DerivedP> W;
+
+        //RowVector3PType backleftbottom = Points.rowwise().minCoeff();
+        igl::octree(Points, point_indices, CH, CN, W);
+        Eigen::MatrixXi II;
+        igl::knn(queryP, Points, k, point_indices, CH, CN, W, II);
+        I = II.cast<DerivedI>();
+    }
+    else {
+        const Eigen::MatrixXd P = Points.template cast<double>().transpose();
+        knncpp::KDTreeMinkowskiX<double, knncpp::EuclideanDistance<double>> kdtree(P);
+        kdtree.setThreads(-1); // automatic
+        // Set the bucket size for each leaf node in the tree. The higher the value
+        // the less leafs have to be visited to find the nearest neighbors. The
+        // lower the value the less distance evaluations have to be computed.
+        // Default is 16.
+        kdtree.setBucketSize(16);
+        kdtree.build();
+        knncpp::Matrixi II;
+        Eigen::MatrixX<double> dist;
+        Eigen::MatrixXd query = queryP.template cast<double>().transpose();
+        kdtree.query(query, k, II, dist);
+        I = II.cast<DerivedI>().transpose();
+    }
+
 }
 template void knnsearch<double, int>(const Eigen::MatrixXd& P1, const Eigen::MatrixXd& P2, Eigen::MatrixXi& I, const int k);
 template void knnsearch<float, size_t>(const Eigen::MatrixXf& P1, const Eigen::MatrixXf& P2, Eigen::MatrixX<size_t>& I, const int k);

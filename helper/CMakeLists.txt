@@ -6,4 +6,5 @@ target_sources(${PROJECT_NAME}
 					utils_data.cpp
 					utils.hpp
 					shape.cpp
-                    			shape.hpp)
+                    			shape.hpp
+					knncpp.h)

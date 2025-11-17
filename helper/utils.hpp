@@ -246,7 +246,9 @@ void knnsearch(const Eigen::MatrixX<DerivedP>& P1,
 Eigen::MatrixXi geodistknnsearch(const Eigen::MatrixXi& QueryIdxInV,
                                  const Eigen::MatrixXd& V,
                                  const Eigen::MatrixXi& F,
-                                 const int k);
+                                 Eigen::MatrixXf& GeoDist,
+                                 const float geodistThresh=0.1,
+                                 const int k=1);
 
 
 } // namespace utils
