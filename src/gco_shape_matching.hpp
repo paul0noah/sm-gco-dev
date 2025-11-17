@@ -9,6 +9,14 @@
 #define USE_CACHING false
 
 #define SCALING_FACTOR 10000.0f
+#define GETTIME(x) std::chrono::steady_clock::time_point x = std::chrono::steady_clock::now()
+#define DURATION_MS(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count()
+#define DURATION_S(x, y) std::chrono::duration_cast<std::chrono::milliseconds>(y - x).count() / 1000
+#define PRINT_SMGCO(x) std::cout << prefix << x << std::endl;
+
+int omp_thread_count();
+int getThreadId();
+
 typedef Eigen::MatrixX<std::tuple<int, int>> TupleMatrixInt;
 
 namespace smgco {
@@ -83,6 +91,24 @@ class GCOSM {
     Eigen::MatrixXd VY;
     const Eigen::MatrixXi FY;
     const Eigen::MatrixXd perVertexFeatureDifference; // should be |VX| x |VY|
+    void triangleWiseInit(TriangleWiseOpts& opts,
+                          GCOTrianglewiseExtra& extraSmooth,
+                          GCoptimizationGeneralGraph *gc,
+                          const Eigen::MatrixXi& AdjFX,
+                          Eigen::MatrixXi& minLables,
+                          const Eigen::MatrixXf& softP,
+                          const unsigned long numDegenerate);
+    void triangleWiseAlgorithm(TriangleWiseOpts& opts,
+                               GCOTrianglewiseExtra& extraSmooth,
+                               GCoptimizationGeneralGraph *gc,
+                               const Eigen::MatrixXi& AdjFX,
+                               const Eigen::MatrixXi& siteLabelCostInt,
+                               const Eigen::MatrixXi& ColourFX,
+                               const int numBlue);
+    unsigned long long computeEnergy(GCoptimizationGeneralGraph* gc,
+                                     const Eigen::MatrixXi& AdjFX,
+                                     const Eigen::MatrixXi& siteLabelCostInt,
+                                     void* extraData);
 
     public:
     GCOSM(const Eigen::MatrixXd VX,

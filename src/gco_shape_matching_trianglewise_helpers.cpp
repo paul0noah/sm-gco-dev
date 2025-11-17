@@ -13,6 +13,26 @@
 #include "helper/graph_cycles.hpp"
 
 
+#if defined(_OPENMP)
+int omp_thread_count() {
+    // workaround for omp_get_num_threads()
+    int n = 0;
+    #pragma omp parallel reduction(+:n)
+    n += 1;
+    return n;
+}
+int getThreadId() {
+    return omp_get_thread_num();
+}
+#else
+int omp_thread_count() {
+    return 1;
+}
+int getThreadId() {
+    return 0;
+}
+#endif
+
 namespace smgco {
 
 
