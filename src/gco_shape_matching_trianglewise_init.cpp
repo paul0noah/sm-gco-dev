@@ -111,6 +111,12 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
 
          */
         else if (setInitialLables == 6 || setInitialLables == 7) {
+            if (opts.costMode == MULTIPLE_LABLE_SPACE_GEODIST || opts.costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX) {
+                PRINT_SMGCO("checked costmodes ✅")
+            }
+            else {
+                PRINT_SMGCO("🚨 THIS INIT MODE REQUIRES GEODIST COST MODE. Will probably brake :)")
+            }
             Eigen::VectorXi I, J;
             Eigen::MatrixXi FYlr, FXlr;
             Eigen::MatrixXd VYlr, VXlr;
@@ -258,7 +264,6 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
             return;*/
 
 
-            std::cout << "check costmodes here" << std::endl;
             /*
              newCost.setConstant(1);
              for (int i = 0; i < interpolatedMatching.rows(); i++)
