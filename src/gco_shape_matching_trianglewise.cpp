@@ -411,12 +411,21 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
                 Eigen::MatrixXi X_lr_2_hr, Y_lr_2_hr;
                 utils::knnsearch(VXlr, VX, X_lr_2_hr);
                 utils::knnsearch(VYlr, VY, Y_lr_2_hr);
+                const int nn = 11;
+                X_lr_2_hr = utils::geodistknnsearch(X_lr_2_hr, VX, FX, GeoDistX, 0.5, nn);
+                Y_lr_2_hr = utils::geodistknnsearch(Y_lr_2_hr, VY, FY, extraSmooth.geoDistY, 0.5, nn);
                 Eigen::MatrixXd featDifflr(VXlr.rows(), VYlr.rows());
                 for (int i = 0; i < VXlr.rows(); i++) {
                     for (int j = 0; j < VYlr.rows(); j++) {
-                        featDifflr(i, j) = perVertexFeatureDifference(X_lr_2_hr(i), Y_lr_2_hr(j));
+                        featDifflr(i, j) = 0.9 * perVertexFeatureDifference(X_lr_2_hr(i, 0), Y_lr_2_hr(j, 0));
+                        for (int n = 1; n < nn; n++) {
+                            featDifflr(i, j) += 0.01 * perVertexFeatureDifference(X_lr_2_hr(i, n), Y_lr_2_hr(j, n));;
+                        }
+
                     }
                 }
+                X_lr_2_hr = X_lr_2_hr.col(0);
+                Y_lr_2_hr = Y_lr_2_hr.col(0);
                 GCOSM smGCO(VXlr, FXlr, VYlr, FYlr, featDifflr);
                 smGCO.updatePrefix("[GCOSM - INIT] ");
                 TriangleWiseOpts optsCopy = opts;
