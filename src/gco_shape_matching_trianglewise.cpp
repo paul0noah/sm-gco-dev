@@ -14,15 +14,6 @@
 namespace smgco {
 
 
-std::string INIT_METHODS[9] = { "NO_INIT",
-                                "MIN_LABEL",
-                                "MIN_LABEL_NON_DEGENERATE",
-                                "TRI_NEIGHBOURS_NON_DEGENERATE",
-                                "TRI_NEIGHBOURS",
-                                "SINKHORN",
-                                "LOWRES_DECIMATE",
-                                "LOWRES_QSLIM",
-                                "RANDOM"};
 std::string ALGORITHMS[10] = { "ALPHA-BETA SWAP",
                                 "ALPHA EXPANSION",
                                 "SWAP followed by EXPANSION",
@@ -332,30 +323,10 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
         }
 
 
-        PRINT_SMGCO("Using algorithm: " << ALGORITHMS[opts.algorithm]);
-        PRINT_SMGCO("Before optimization energy is " << computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth)) / SCALING_FACTOR);
 
+        PRINT_SMGCO("Before optimization energy is " << computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth)) / SCALING_FACTOR);
         GETTIME(t4);
-        if (opts.algorithm == 1) {
-            gc->expansion(numIters);
-        }
-        else if (opts.algorithm == 0) {
-            gc->swap(numIters);
-        }
-        else if (opts.algorithm == 2) {
-            gc->swap(numIters);
-            gc->expansion(numIters);
-        }
-        else if (opts.algorithm == 3) {
-            gc->expansion(numIters);
-            gc->swap(numIters);
-        }
-        /*
-         >>>>>>>>>>>>> custom alpha expansion (via line search)
-         */
-        else if (opts.algorithm >= 4) {
-            triangleWiseAlgorithm(opts, extraSmooth, gc, AdjFX, siteLabelCostInt, ColourFX, numBlue);
-        }
+        triangleWiseAlgorithm(opts, extraSmooth, gc, AdjFX, siteLabelCostInt, ColourFX, numBlue);
         GETTIME(t5);
         PRINT_SMGCO("After optimization energy is " << computeEnergy(gc, AdjFX, siteLabelCostInt, static_cast<void*>(&extraSmooth)) / SCALING_FACTOR);
         PRINT_SMGCO("Optimisation took: " << DURATION_S(t4, t5) << " s");
