@@ -26,7 +26,7 @@ std::tuple<float, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::MatrixXi, Eigen::Matr
 
     const int numFacesThreshold = 1200;
     if (opts.setInitialLables == 6 && FX.rows() < numFacesThreshold && FY.rows() < numFacesThreshold){
-        PRINT_SMGCO("WARNING: Changing init mode to 4 since number of faces is too small");
+        PRINT_SMGCO("⚠️ WARNING: Changing init mode to 4 since number of faces is too small");
         opts.setInitialLables = 4;
     }
 

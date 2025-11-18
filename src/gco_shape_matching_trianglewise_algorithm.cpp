@@ -222,7 +222,7 @@ void GCOSM::triangleWiseAlgorithm(TriangleWiseOpts& opts,
                         << ";     # successfull expansions = " << successFullExpansions
                         << ";     took = " << DURATION_MS(t00, t01) << "ms");
             if (newEnergy > oldEnergy) {
-                PRINT_SMGCO("warning, energy increased")
+                PRINT_SMGCO("⚠️ WARNING: energy increased new=" << newEnergy << "  old = " << oldEnergy);
             }
             oldEnergy = newEnergy;
 
