@@ -243,7 +243,7 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                         const float distanceKonY = GeoDistY(j, p2phr(matchedIdxK, 1)) / maxGeodistBetweenMatchedOnY;
                         cost += std::abs(distanceKonY - distancesX(0, k));
                     }
-                    newCost(i, j) = cost * maxGeodistBetweenMatchedOnX * maxGeodistBetweenMatchedOnY;
+                    newCost(i, j) = 0.1 * cost * maxGeodistBetweenMatchedOnX * maxGeodistBetweenMatchedOnY + 1.0 * perVertexFeatureDifference(i, j);
                     if (maxGeoDistToMatched > maxGeodistBetweenMatchedOnY) {
                         continue;
                     }
