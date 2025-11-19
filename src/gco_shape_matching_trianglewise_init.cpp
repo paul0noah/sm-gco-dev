@@ -14,7 +14,7 @@
 
 namespace smgco {
 
-std::string INIT_METHODS[9] = { "NO_INIT",
+std::string INIT_METHODS[10] = { "NO_INIT",
                                 "MIN_LABEL",
                                 "MIN_LABEL_NON_DEGENERATE",
                                 "TRI_NEIGHBOURS_NON_DEGENERATE",
@@ -22,6 +22,7 @@ std::string INIT_METHODS[9] = { "NO_INIT",
                                 "SINKHORN",
                                 "LOWRES_DECIMATE",
                                 "LOWRES_QSLIM",
+                                "FEAT_SIM_P2P_MAP",
                                 "RANDOM"};
 
 
@@ -34,9 +35,9 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                              const unsigned long numDegenerate) {
     const int numVertices = FX.rows();
     const int numLables = extraSmooth.LableFY.rows();
-    const int setInitialLables = opts.setInitialLables;
+    int setInitialLables = opts.setInitialLables;
 
-    const int strIndex = opts.setInitialLables >= 10 ? 7 : opts.setInitialLables;
+    const int strIndex = opts.setInitialLables >= 10 ? 9 : opts.setInitialLables;
     PRINT_SMGCO("Using mode " << INIT_METHODS[strIndex] << ", " << opts.setInitialLables);
     std::vector<std::vector<int>> vertexInLables;
     if (setInitialLables >= 3) {
@@ -68,13 +69,51 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                 gc->setLabel(i, randomLabel + i * numLables);
             }
         }
-        else if (setInitialLables == 1 || setInitialLables == 2) {
+        Eigen::MatrixXi initLables(0, 0);
+        if (setInitialLables == 8) {
+            Eigen::MatrixXi p2p(VX.rows(), 1);
+            for (int i = 0; i < VX.rows(); i++) {
+                int index;
+                perVertexFeatureDifference.row(i).minCoeff(&index);
+                p2p(i, 0) = index;
+            }
+            initLables = Eigen::MatrixXi(FX.rows(), 1);
+            initLables.setConstant(-1);
+            Eigen::MatrixXi desiredLabel(1, 3);
+            for (int f = 0; f < FX.rows(); f++) {
+                desiredLabel.row(0) << p2p(FX(f, 0)), p2p(FX(f, 1)), p2p(FX(f, 2));
+                //std::cout << desiredLabel << std::endl;
+
+                bool found = false;
+                for (const auto& labelIdx : vertexInLables[desiredLabel(0, 0)]) {
+                    const Eigen::MatrixXi label = extraSmooth.LableFY.row(labelIdx);
+                    //std::cout << "   "<< extraSmooth.LableFY.row(labelIdx) << std::endl;
+                    if ((label.array() == desiredLabel.array()).all()) {
+                        found = true;
+                        initLables(f) = labelIdx;
+                        break;
+                    }
+
+                }
+                if (found) {
+                    const long labelId = initLables(f) + f * numLables;
+                    gc->setLabel(f, labelId);
+                }
+                else {
+                    std::cout << "didnt find "<<desiredLabel << std::endl;
+                }
+            }
+            //Eigen::MatrixXi FXdesiredLabels = p2p(FX);
+            setInitialLables = 4;
+
+        }
+        if (setInitialLables == 1 || setInitialLables == 2) {
             for (int i = 0; i < numVertices; i++) {
                 int minIndex = minLables(i);
                 gc->setLabel(i, minIndex + i * numLables);
             }
         }
-        else if (setInitialLables == 5) {
+        if (setInitialLables == 5) {
 
             #if defined(_OPENMP)
             #pragma omp parallel for
@@ -110,7 +149,7 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
 
 
          */
-        else if (setInitialLables == 6 || setInitialLables == 7) {
+        if (setInitialLables == 6 || setInitialLables == 7) {
             if (opts.costMode == MULTIPLE_LABLE_SPACE_GEODIST || opts.costMode == MULTIPLE_LABLE_SPACE_GEODIST_MAX) {
                 PRINT_SMGCO("checked costmodes ✅")
             }
@@ -196,7 +235,7 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
 
 
             // find closest matched vertices (on x) for each vertex of X
-            const int numNNMatchedPoints = 5;
+            const int numNNMatchedPoints = 4;
             const Eigen::MatrixXf AllPoints     = GeoDistX(Eigen::all, p2phr.col(0));
             const Eigen::MatrixXf MatchedPoints = GeoDistX(p2phr.col(0), p2phr.col(0));
             Eigen::MatrixXi closestMatchedPoints;
@@ -243,7 +282,8 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                         const float distanceKonY = GeoDistY(j, p2phr(matchedIdxK, 1)) / maxGeodistBetweenMatchedOnY;
                         cost += std::abs(distanceKonY - distancesX(0, k));
                     }
-                    newCost(i, j) = 0.1 * cost * maxGeodistBetweenMatchedOnX * maxGeodistBetweenMatchedOnY + 1.0 * perVertexFeatureDifference(i, j);
+                    newCost(i, j) = 0.5 * cost * maxGeodistBetweenMatchedOnX * maxGeodistBetweenMatchedOnY + 1.0 * perVertexFeatureDifference(i, j);
+                    //std::cout << "newcost = " << cost << " oldcost = " << perVertexFeatureDifference(i, j) << std::endl;
                     if (maxGeoDistToMatched > maxGeodistBetweenMatchedOnY) {
                         continue;
                     }
@@ -410,11 +450,14 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
 
 
          */
-        else if (setInitialLables >= 3) {
+        if (setInitialLables == 3 || setInitialLables == 4) {
             #if defined(_OPENMP)
             #pragma omp parallel for
             #endif
             for (int i = 0; i < numVertices; i++) {
+                if (initLables.rows() > 0 && initLables(i) != -1) {
+                    continue;
+                }
                 // find best sum for each triangle
                 int minIndex = 0;
                 double bestSum = std::numeric_limits<double>::infinity();
@@ -492,9 +535,9 @@ void GCOSM::triangleWiseInit(TriangleWiseOpts& opts,
                 gc->setLabel(i, minIndex + i * numLables);
             }
         }
-        else {
-            PRINT_SMGCO("Init mode not supported :( I will not init -> this could cause bad resaults");
-        }
+        //else {
+        //    PRINT_SMGCO("Init mode not supported :( I will not init -> this could cause bad resaults");
+        //}
 
        
     }
