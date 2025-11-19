@@ -119,8 +119,8 @@ class CMakeBuild(build_ext):
 
 setup(
     name='sm_gco',
-    version='0.0.1',
-    description='Starter project for cpp python wrappers',
+    version='0.1.0',
+    description='Shape matching with alpha expansion',
     packages=find_packages(),
     ext_modules=[CMakeExtension(name='sm_gco')],
     cmdclass=dict(build_ext=CMakeBuild),
